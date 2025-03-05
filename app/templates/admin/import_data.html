@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Data - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-file-import"></i> Import Data
+        </h1>
+        <p class="lead">Import data from JSON file</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Upload JSON File</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.import_data') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="json_file" class="form-label">JSON File</label>
+                        <input type="file" class="form-control" id="json_file" name="json_file" accept=".json" required>
+                        <small class="form-text text-muted">
+                            Upload a JSON file containing data to import. The file should follow the expected format.
+                        </small>
+                    </div>
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">Import Information</h5>
+                        <p>The JSON file should contain data in the following format:</p>
+                        <pre><code>{
+  "users": [...],
+  "clients": [...],
+  "projects": [...],
+  "consultants": [...],
+  "products": [...]
+}</code></pre>
+                        <p class="mb-0">Existing data with the same identifiers will be updated.</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Import Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

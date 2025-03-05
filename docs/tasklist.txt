@@ -1,0 +1,79 @@
+Task List for Implementing Flask Resource Planner
+
+[x] 1. Project Setup
+    [x] Create a new Flask project structure
+    [x] Set up a virtual environment
+    [x] Install Flask and dependencies
+    [x] Initialize requirements.txt
+
+[x] 2. Define Flask App Structure
+    [x] Create 'app/' directory and __init__.py
+    [x] Define Blueprints (projects, clients, catalog, admin)
+    [x] Create 'templates/' for HTML pages
+    [x] Create 'static/' for CSS & JavaScript
+
+[~] 3. Database Models (Needs Input)
+    [x] Set up SQLite database
+    [~] Define models for:
+        [~] Projects (Basic implementation, needs refinement)
+        [~] Clients (Basic implementation, needs refinement)
+        [~] Products (Basic implementation, needs refinement)
+        [x] Admin Users
+
+[~] 4. Routing & Views
+    [~] Implement routes for:
+        [~] Projects (CRUD - basic implementation)
+        [~] Clients (CRUD - basic implementation)
+        [~] Product Catalog (CRUD - basic implementation)
+        [x] Admin Dashboard
+    [x] Set up navigation between pages
+
+[~] 5. HTML Templates
+    [x] Create 'base.html' with a navbar
+    [~] Create individual templates:
+        [x] Admin templates (dashboard.html, users/index.html, users/create.html, users/edit.html)
+        [x] Projects templates (index.html, create.html, list.html)
+        [x] Clients templates (index.html, create.html, list.html)
+        [x] Catalog templates (create.html)
+        [ ] Missing templates:
+            [ ] projects/view.html
+            [ ] projects/edit.html
+            [ ] clients/view.html
+            [ ] clients/edit.html
+            [ ] clients/import.html
+            [ ] catalog/index.html
+            [ ] catalog/edit.html
+            [ ] catalog/view.html
+    [x] Use Jinja2 templating for dynamic data
+
+[x] 6. User Authentication (Needs Decision)
+    [x] Implement Flask-Login for admin authentication
+    [x] Create login and registration pages
+
+[ ] 7. API Endpoints (Optional)
+    [ ] Implement basic REST API for CRUD operations
+
+[ ] 8. Deployment Setup
+    [ ] Configure Flask app with Gunicorn
+    [ ] Prepare a .env file
+    [ ] Create a Dockerfile or deployment script
+
+[ ] 9. Testing & Debugging
+    [~] Add unit tests for models and routes
+    [~] Test all CRUD operations
+
+[~] 10. Documentation
+    [~] Create README.md
+    [ ] Document API endpoints if applicable
+
+Next Steps:
+1. Complete remaining templates for projects, clients, and catalog
+2. Refine database models with additional fields and relationships
+3. Implement search and filter functionality in list views
+4. Add data validation and error handling
+5. Implement file upload for client/project documents
+6. Create dashboard visualizations and reports
+7. Add user profile management
+8. Implement role-based access control for all routes
+9. Add missing icon in admin/users view 
+

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Product/Service - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-box-open"></i> Create Product/Service
+        </h1>
+        <p class="lead">Add a new product or service to the catalog</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('catalog.list_products') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Catalog
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Product/Service Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('catalog.create_product') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Code</label>
+                        <input type="text" class="form-control" id="code" name="code" required>
+                        <small class="form-text text-muted">Unique identifier for this product/service</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="group_id" class="form-label">Group</label>
+                        <select class="form-select" id="group_id" name="group_id">
+                            <option value="">-- No Group --</option>
+                            {% for group in groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="unit_price" class="form-label">Unit Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="unit_price" name="unit_price" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="unit" class="form-label">Unit</label>
+                            <input type="text" class="form-control" id="unit" name="unit" placeholder="e.g., hour, day, piece">
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                        <label class="form-check-label" for="is_active">Active</label>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Product/Service</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

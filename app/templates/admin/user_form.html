@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if user else 'Create' }} User - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">
+            <i class="fas fa-{{ 'user-edit' if user else 'user-plus' }}"></i> 
+            {{ 'Edit' if user else 'Create' }} User
+        </h1>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Users
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ user.first_name if user else '' }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ user.last_name if user else '' }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user.email if user else '' }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ user.username if user else '' }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">
+                                    {{ 'New Password (leave blank to keep current)' if user else 'Password' }}
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       {{ 'required' if not user else '' }}>
+                                {% if not user %}
+                                <div class="form-text">
+                                    Password must be at least 8 characters and include a mix of letters, numbers, and special characters.
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="confirm_password" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                       {{ 'required' if not user else '' }}>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="role" class="form-label">Role</label>
+                                <select class="form-select" id="role" name="role_id" required>
+                                    <option value="">Select Role</option>
+                                    {% for role in roles %}
+                                    <option value="{{ role.id }}" {% if user and user.role_id == role.id %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">Department</label>
+                                <select class="form-select" id="department" name="department">
+                                    <option value="">Select Department</option>
+                                    <option value="IT" {% if user and user.department == 'IT' %}selected{% endif %}>IT</option>
+                                    <option value="HR" {% if user and user.department == 'HR' %}selected{% endif %}>HR</option>
+                                    <option value="Finance" {% if user and user.department == 'Finance' %}selected{% endif %}>Finance</option>
+                                    <option value="Marketing" {% if user and user.department == 'Marketing' %}selected{% endif %}>Marketing</option>
+                                    <option value="Operations" {% if user and user.department == 'Operations' %}selected{% endif %}>Operations</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="avatar" class="form-label">Profile Picture</label>
+                            <input type="file" class="form-control" id="avatar" name="avatar" accept="image/*">
+                            <div class="form-text">Upload a profile picture (JPG, PNG, max 2MB)</div>
+                        </div>
+                        
+                        {% if user %}
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                       {% if user.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">Active Account</label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {{ 'Update User' if user else 'Create User' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            {% if user %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">User Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <img src="{{ user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" 
+                             alt="Profile Picture" class="rounded-circle img-fluid" style="max-width: 120px;">
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Status</span>
+                            <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                {{ 'Active' if user.is_active else 'Inactive' }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Created</span>
+                            <span>{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Last Login</span>
+                            <span>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#deleteUserModal">
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" 
+                                data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                            <i class="fas fa-key"></i> Reset Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Delete User Modal -->
+            <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Deletion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete user <strong>{{ user.first_name }} {{ user.last_name }}</strong>?
+                            This action cannot be undone.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-danger">Delete User</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reset Password Modal -->
+            <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Reset User Password</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form action="{{ url_for('admin.reset_user_password', user_id=user.id) }}" method="POST">
+                            <div class="modal-body">
+                                <p>Set a new password for <strong>{{ user.first_name }} {{ user.last_name }}</strong>:</p>
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirm_new_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-warning">Reset Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><i class="fas fa-info-circle text-info"></i> Creating a new user account.</p>
+                    <ul>
+                        <li>All fields marked with * are required.</li>
+                        <li>The user will receive an email with login instructions.</li>
+                        <li>New users are active by default.</li>
+                        <li>You can assign roles and permissions after creation.</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

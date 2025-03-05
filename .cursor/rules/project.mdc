@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Guidelines
+- Follow component naming conventions
+- Implement proper prop validation

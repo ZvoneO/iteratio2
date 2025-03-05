@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - Project Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-project-diagram"></i> {{ project.name }}
+        </h1>
+        <p class="lead">Project Details</p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group">
+            {% if current_user.role in ['Admin', 'Manager'] or (current_user.role == 'Project Manager' and project.manager_id == current_user.id) %}
+            <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit"></i> Edit Project
+            </a>
+            {% endif %}
+            <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Projects
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Project Overview -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Project Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Status</div>
+                    <div class="col-md-9">
+                        {% if project.status == 'Active' %}
+                        <span class="badge bg-success">Active</span>
+                        {% elif project.status == 'Completed' %}
+                        <span class="badge bg-primary">Completed</span>
+                        {% elif project.status == 'On Hold' %}
+                        <span class="badge bg-warning">On Hold</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ project.status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Client</div>
+                    <div class="col-md-9">
+                        {% if project.client %}
+                        <a href="{{ url_for('clients.view_client', client_id=project.client.id) }}">{{ project.client.name }}</a>
+                        {% else %}
+                        <span class="text-muted">No client assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Project Manager</div>
+                    <div class="col-md-9">
+                        {% if project.manager_id %}
+                        {{ project.manager.first_name }} {{ project.manager.last_name }}
+                        {% else %}
+                        <span class="text-muted">No manager assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Timeline</div>
+                    <div class="col-md-9">
+                        {% if project.start_date and project.end_date %}
+                        {{ project.start_date.strftime('%b %d, %Y') }} - {{ project.end_date.strftime('%b %d, %Y') }}
+                        ({{ (project.end_date - project.start_date).days }} days)
+                        {% elif project.start_date %}
+                        Starts: {{ project.start_date.strftime('%b %d, %Y') }}
+                        {% elif project.end_date %}
+                        Due: {{ project.end_date.strftime('%b %d, %Y') }}
+                        {% else %}
+                        <span class="text-muted">No timeline set</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Template</div>
+                    <div class="col-md-9">
+                        {% if project.template %}
+                        <a href="{{ url_for('projects.view_template', template_id=project.template.id) }}">{{ project.template.name }}</a>
+                        {% else %}
+                        <span class="text-muted">Custom project (no template)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 fw-bold">Description</div>
+                    <div class="col-md-9">
+                        {% if project.description %}
+                        {{ project.description|nl2br }}
+                        {% else %}
+                        <span class="text-muted">No description provided</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Phases -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Project Phases</h5>
+                {% if project.phases|length > 0 %}
+                <span class="badge bg-primary">{{ project.phases|length }} phases</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if project.phases|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 25%">Phase</th>
+                                <th style="width: 40%">Description</th>
+                                <th style="width: 15%">Duration</th>
+                                <th style="width: 15%">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for phase in project.phases|sort(attribute='order') %}
+                            <tr>
+                                <td>{{ phase.order }}</td>
+                                <td class="fw-bold">{{ phase.name }}</td>
+                                <td>{{ phase.description or '-' }}</td>
+                                <td>{{ phase.duration_days or '-' }} days</td>
+                                <td>
+                                    {% if phase.status == 'Completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% elif phase.status == 'In Progress' %}
+                                    <span class="badge bg-info">In Progress</span>
+                                    {% elif phase.status == 'Not Started' %}
+                                    <span class="badge bg-secondary">Not Started</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ phase.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> No phases defined for this project.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Project Details -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Project Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 fw-bold">Created</div>
+                    <div class="col-6">{{ project.created_at.strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6 fw-bold">Last Updated</div>
+                    <div class="col-6">{{ project.updated_at.strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-6 fw-bold">Project ID</div>
+                    <div class="col-6">{{ project.id }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products & Services -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Products & Services</h5>
+                {% if project.products|length > 0 %}
+                <span class="badge bg-primary">{{ project.products|length }} items</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if project.products|length > 0 %}
+                <ul class="list-group list-group-flush">
+                    {% for product in project.products %}
+                    <li class="list-group-item">
+                        <div class="fw-bold">{{ product.name }}</div>
+                        <small class="text-muted">{{ product.description|truncate(100) }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> No products or services assigned.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Assigned Consultants -->
+        <div class="card shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Assigned Consultants</h5>
+                {% if project.consultants|length > 0 %}
+                <span class="badge bg-primary">{{ project.consultants|length }} consultants</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if project.consultants|length > 0 %}
+                <ul class="list-group list-group-flush">
+                    {% for consultant in project.consultants %}
+                    <li class="list-group-item">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <img src="{{ url_for('static', filename='img/default-avatar.svg') }}" alt="Avatar" class="rounded-circle" width="40">
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ consultant.full_name }}</div>
+                                <small class="text-muted">{{ consultant.status }}</small>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> No consultants assigned to this project.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

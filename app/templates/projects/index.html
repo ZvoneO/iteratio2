@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-project-diagram"></i> Projects
+        </h1>
+        <p class="lead">Manage your projects</p>
+    </div>
+    <div class="col-auto">
+        {% if current_user.role in ['Admin', 'Manager', 'Project Manager'] %}
+        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Project
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Search & Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('projects.list_projects') }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ request.args.get('search', '') }}" placeholder="Project name, code...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status_filter" class="form-label">Status</label>
+                    <select class="form-select" id="status_filter" name="status_filter">
+                        <option value="">All Statuses</option>
+                        <option value="Planning" {% if request.args.get('status_filter') == 'Planning' %}selected{% endif %}>Planning</option>
+                        <option value="In Progress" {% if request.args.get('status_filter') == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Completed" {% if request.args.get('status_filter') == 'Completed' %}selected{% endif %}>Completed</option>
+                        <option value="On Hold" {% if request.args.get('status_filter') == 'On Hold' %}selected{% endif %}>On Hold</option>
+                        <option value="Cancelled" {% if request.args.get('status_filter') == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="client_filter" class="form-label">Client</label>
+                    <select class="form-select" id="client_filter" name="client_filter">
+                        <option value="">All Clients</option>
+                        <!-- Client options would be populated here -->
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Projects List -->
+<div class="card shadow">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Projects List</h5>
+            <span class="badge bg-primary">{{ projects|length }} Projects</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if projects %}
+                        {% for project in projects %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-decoration-none">
+                                    {{ project.name }}
+                                </a>
+                                {% if project.code %}
+                                <br><small class="text-muted">{{ project.code }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if project.client %}
+                                <a href="{{ url_for('clients.view_client', client_id=project.client.id) }}" class="text-decoration-none">
+                                    {{ project.client.name }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">No client</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if project.status == 'Planning' %}
+                                <span class="badge bg-info">Planning</span>
+                                {% elif project.status == 'In Progress' %}
+                                <span class="badge bg-primary">In Progress</span>
+                                {% elif project.status == 'Completed' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif project.status == 'On Hold' %}
+                                <span class="badge bg-warning">On Hold</span>
+                                {% elif project.status == 'Cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ project.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else 'Not set' }}</td>
+                            <td>{{ project.end_date.strftime('%Y-%m-%d') if project.end_date else 'Not set' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if current_user.role in ['Admin', 'Manager', 'Project Manager'] %}
+                                    <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if current_user.role in ['Admin', 'Manager'] %}
+                                    <button type="button" class="btn btn-outline-danger" title="Delete" 
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ project.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Delete Modal -->
+                                {% if current_user.role in ['Admin', 'Manager'] %}
+                                <div class="modal fade" id="deleteModal{{ project.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ project.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ project.id }}">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete the project <strong>{{ project.name }}</strong>? This action cannot be undone.
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('projects.delete_project', project_id=project.id) }}" method="POST" class="d-inline">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <p class="mb-0 text-muted">No projects found</p>
+                                {% if current_user.role in ['Admin', 'Manager', 'Project Manager'] %}
+                                <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus"></i> Create First Project
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

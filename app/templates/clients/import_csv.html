@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Clients - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-file-import"></i> Import Clients
+        </h1>
+        <p class="lead">Import clients from a CSV file</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('clients.list_clients') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Clients
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">CSV File Upload</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('clients.import_csv') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">Select CSV File</label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        <div class="form-text">File must be in CSV format with headers.</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i> Upload and Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">CSV Format Instructions</h5>
+            </div>
+            <div class="card-body">
+                <h6>Required Format</h6>
+                <p>Your CSV file should include the following columns:</p>
+                <ul class="small">
+                    <li><strong>name</strong> (required) - Client name</li>
+                    <li><strong>address</strong> (optional) - Street address</li>
+                    <li><strong>city</strong> (optional) - City</li>
+                    <li><strong>country</strong> (optional) - Country name</li>
+                </ul>
+                
+                <h6>Example</h6>
+                <pre class="bg-light p-2 small">
+name,address,city,country
+Acme Inc.,123 Main St,New York,United States
+TechCorp,456 Park Ave,San Francisco,United States</pre>
+                
+                <h6>Notes</h6>
+                <ul class="small">
+                    <li>The first row must contain column headers</li>
+                    <li>Clients with duplicate names will be skipped</li>
+                    <li>Country names must match existing countries in the system</li>
+                </ul>
+                
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Large files may take some time to process.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

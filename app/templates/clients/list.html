@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Clients - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-building"></i> Clients
+        </h1>
+        <p class="lead">Manage your client database</p>
+    </div>
+    <div class="col-auto">
+        {% if current_user.role in ['Admin', 'Manager'] %}
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('clients.create_client') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Add Client
+            </a>
+            <a href="{{ url_for('clients.import_csv') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-file-import"></i> Import
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Search and Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('clients.list_clients') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" placeholder="Client name or code" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-3">
+                <label for="industry" class="form-label">Industry</label>
+                <select class="form-select" id="industry" name="industry">
+                    <option value="">All Industries</option>
+                    <option value="Technology" {% if request.args.get('industry') == 'Technology' %}selected{% endif %}>Technology</option>
+                    <option value="Finance" {% if request.args.get('industry') == 'Finance' %}selected{% endif %}>Finance</option>
+                    <option value="Healthcare" {% if request.args.get('industry') == 'Healthcare' %}selected{% endif %}>Healthcare</option>
+                    <option value="Education" {% if request.args.get('industry') == 'Education' %}selected{% endif %}>Education</option>
+                    <option value="Manufacturing" {% if request.args.get('industry') == 'Manufacturing' %}selected{% endif %}>Manufacturing</option>
+                    <option value="Retail" {% if request.args.get('industry') == 'Retail' %}selected{% endif %}>Retail</option>
+                    <option value="Government" {% if request.args.get('industry') == 'Government' %}selected{% endif %}>Government</option>
+                    <option value="Non-profit" {% if request.args.get('industry') == 'Non-profit' %}selected{% endif %}>Non-profit</option>
+                    <option value="Other" {% if request.args.get('industry') == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Clients List -->
+<div class="card shadow">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Client List</h5>
+        <span class="badge bg-primary">{{ clients|length }} clients</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>Industry</th>
+                        <th>Contact</th>
+                        <th>Projects</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="fw-bold text-decoration-none">
+                                {{ client.name }}
+                            </a>
+                        </td>
+                        <td><span class="text-muted">{{ client.code or '-' }}</span></td>
+                        <td>{{ client.industry or '-' }}</td>
+                        <td>
+                            {% if client.email %}
+                            <a href="mailto:{{ client.email }}" class="text-decoration-none">
+                                {{ client.contact_name or client.email }}
+                            </a>
+                            {% else %}
+                            {{ client.contact_name or '-' }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ client.projects|default(0, true) }}</span>
+                        </td>
+                        <td>
+                            {% if client.active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.role in ['Admin', 'Manager'] %}
+                                <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteClientModal{{ client.id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteClientModal{{ client.id }}" tabindex="-1" aria-labelledby="deleteClientModalLabel{{ client.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteClientModalLabel{{ client.id }}">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-start">
+                                            <p>Are you sure you want to delete the client <strong>{{ client.name }}</strong>?</p>
+                                            <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('clients.delete_client', client_id=client.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-danger">Delete Client</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i> No clients found.
+                                {% if current_user.role in ['Admin', 'Manager'] %}
+                                <a href="{{ url_for('clients.create_client') }}" class="ms-2">Add your first client</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="card-footer">
+        <nav aria-label="Client pagination">
+            <ul class="pagination justify-content-center mb-0">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.prev_num, **request.args) }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page in pagination.iter_pages() %}
+                    {% if page %}
+                        {% if page == pagination.page %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ page }}</a></li>
+                        {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('clients.list_clients', page=page, **request.args) }}">{{ page }}</a></li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.next_num, **request.args) }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

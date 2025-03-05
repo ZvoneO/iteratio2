@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Product Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-box"></i> {{ product.name }}
+        </h1>
+        <p class="lead">Product Details</p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group">
+            {% if current_user.role in ['Admin', 'Manager'] %}
+            <a href="{{ url_for('catalog.edit_product', product_id=product.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% endif %}
+            <a href="{{ url_for('catalog.list_products') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Catalog
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Product Overview -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Product Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Name</div>
+                    <div class="col-md-9">{{ product.name }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Type</div>
+                    <div class="col-md-9">{{ product.type }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Group</div>
+                    <div class="col-md-9">{{ product.group.name if product.group else 'Not categorized' }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Status</div>
+                    <div class="col-md-9">
+                        {% if product.active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 fw-bold">Description</div>
+                    <div class="col-md-9">
+                        {% if product.description %}
+                        {{ product.description|nl2br }}
+                        {% else %}
+                        <span class="text-muted">No description provided</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing & Units -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Pricing & Units</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Unit Price</div>
+                    <div class="col-md-9">
+                        {% if product.unit_price is defined %}
+                        ${{ product.unit_price|default(0)|round(2) }}
+                        {% else %}
+                        <span class="text-muted">Not specified</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Unit</div>
+                    <div class="col-md-9">
+                        {% if product.unit %}
+                        {{ product.unit }}
+                        {% else %}
+                        <span class="text-muted">Each</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 fw-bold">Code</div>
+                    <div class="col-md-9">
+                        {% if product.code %}
+                        {{ product.code }}
+                        {% else %}
+                        <span class="text-muted">No code assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Product Details -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Product Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 fw-bold">Created</div>
+                    <div class="col-6">{{ product.created_at.strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6 fw-bold">Last Updated</div>
+                    <div class="col-6">{{ product.updated_at.strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-6 fw-bold">Product ID</div>
+                    <div class="col-6">{{ product.id }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage in Projects -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Used in Projects</h5>
+                {% if product.projects|length > 0 %}
+                <span class="badge bg-primary">{{ product.projects|length }} projects</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if product.projects|length > 0 %}
+                <ul class="list-group list-group-flush">
+                    {% for project in product.projects %}
+                    <li class="list-group-item">
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-decoration-none">
+                            {{ project.name }}
+                        </a>
+                        <small class="text-muted d-block">{{ project.client.name if project.client else 'No client' }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> Not used in any projects.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Used in Templates -->
+        <div class="card shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Used in Templates</h5>
+                {% if product.templates|length > 0 %}
+                <span class="badge bg-primary">{{ product.templates|length }} templates</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if product.templates|length > 0 %}
+                <ul class="list-group list-group-flush">
+                    {% for template in product.templates %}
+                    <li class="list-group-item">
+                        <a href="{{ url_for('projects.view_template', template_id=template.id) }}" class="text-decoration-none">
+                            {{ template.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> Not used in any templates.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Product - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-edit"></i> Edit Product/Service
+        </h1>
+        <p class="lead">Update details for {{ product.name }}</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('catalog.view_product', product_id=product.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Product
+        </a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('catalog.edit_product', product_id=product.id) }}">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product/Service Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ product.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ product.description }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Product Code</label>
+                        <input type="text" class="form-control" id="code" name="code" value="{{ product.code }}">
+                        <div class="form-text">A unique identifier for this product/service</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="type" name="type" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="Product" {% if product.type == 'Product' %}selected{% endif %}>Product</option>
+                            <option value="Service" {% if product.type == 'Service' %}selected{% endif %}>Service</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="group_id" class="form-label">Group <span class="text-danger">*</span></label>
+                        <select class="form-select" id="group_id" name="group_id" required>
+                            <option value="">-- Select Group --</option>
+                            {% for group in groups %}
+                            <option value="{{ group.id }}" {% if group.id == product.group_id %}selected{% endif %}>{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="unit_price" class="form-label">Unit Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="unit_price" name="unit_price" value="{{ product.unit_price|default(0) }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">Unit</label>
+                        <input type="text" class="form-control" id="unit" name="unit" value="{{ product.unit|default('Each') }}">
+                        <div class="form-text">e.g., Each, Hour, Day, License, etc.</div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="active" name="active" {% if product.active %}checked{% endif %}>
+                        <label class="form-check-label" for="active">Active</label>
+                        <div class="form-text">Inactive products won't appear in dropdown menus for new projects</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{{ url_for('catalog.view_product', product_id=product.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Usage Information -->
+<div class="card shadow">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Usage Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Projects Using This Product/Service</h6>
+                {% if product.projects|length > 0 %}
+                <ul class="list-unstyled">
+                    {% for project in product.projects %}
+                    <li class="mb-2">
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-decoration-none">
+                            {{ project.name }}
+                        </a>
+                        <small class="text-muted d-block">{{ project.client.name if project.client else 'No client' }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">Not used in any projects.</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <h6>Templates Using This Product/Service</h6>
+                {% if product.templates|length > 0 %}
+                <ul class="list-unstyled">
+                    {% for template in product.templates %}
+                    <li class="mb-2">
+                        <a href="{{ url_for('projects.view_template', template_id=template.id) }}" class="text-decoration-none">
+                            {{ template.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">Not used in any templates.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

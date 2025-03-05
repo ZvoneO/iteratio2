@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+            <small class="text-muted">Welcome, {{ current_user.username }}</small>
+        </h1>
+        <p class="lead">Overview of your resource planning data</p>
+    </div>
+</div>
+
+<!-- Role-based dashboard content -->
+<div class="row">
+    <!-- Projects Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-primary h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-project-diagram"></i> Projects</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ project_count }}</h1>
+                <p class="card-text">
+                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                        Total Projects
+                    {% else %}
+                        Assigned Projects
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-primary btn-sm w-100">
+                    View Projects
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-building"></i> Clients</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ client_count }}</h1>
+                <p class="card-text">
+                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                        Total Clients
+                    {% else %}
+                        Associated Clients
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('clients.list_clients') }}" class="btn btn-outline-success btn-sm w-100">
+                    View Clients
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users/Consultants Card -->
+    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-info h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Users</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ user_count }}</h1>
+                <p class="card-text">Total Users</p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-info btn-sm w-100">
+                    Manage Users
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Consultants Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-warning h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-user-tie"></i> Consultants</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ consultant_count }}</h1>
+                <p class="card-text">
+                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                        Total Consultants
+                    {% else %}
+                        Team Members
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="#" class="btn btn-outline-warning btn-sm w-100">
+                    View Consultants
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> New Project
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('clients.create_client') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-plus"></i> New Client
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.create_user') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-user-plus"></i> New User
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('catalog.create_product') }}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-box-open"></i> New Product
+                        </a>
+                    </div>
+                    {% elif current_user.role == 'Project Manager' %}
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> New Project
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-tasks"></i> Manage Tasks
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-info w-100">
+                            <i class="fas fa-calendar-alt"></i> View Calendar
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-clipboard-list"></i> My Tasks
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-info w-100">
+                            <i class="fas fa-calendar-alt"></i> My Calendar
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-project-diagram"></i> My Projects
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section (Placeholder) -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center">Recent activity will be displayed here in future updates.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
