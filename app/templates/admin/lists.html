@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Lists - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-list"></i> Manage Lists
+        </h1>
+        <p class="lead">Create and manage lists for dropdown values</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('admin.manage_new_list') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Available Lists</h5>
+            </div>
+            <div class="card-body">
+                {% if lists %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Items</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for list in lists %}
+                            <tr>
+                                <td>{{ list.name }}</td>
+                                <td>{{ list.description }}</td>
+                                <td>{{ list.items|length }}</td>
+                                <td>{{ list.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin.manage_list', list_id=list.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit List & Items
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No lists have been created yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
