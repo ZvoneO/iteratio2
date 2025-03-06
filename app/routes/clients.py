@@ -1,11 +1,18 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from ..models import db, Client, ListItem
+from ..models import db, Client, List, ListItem, Project, Role
 from functools import wraps
 import csv
 import io
+import json
 
 clients_bp = Blueprint('clients', __name__, url_prefix='/clients')
+
+# Helper function to check if user has a specific role
+def user_has_role(user, role_name):
+    """Check if a user has a specific role."""
+    role = Role.query.filter_by(name=role_name).first()
+    return role in user.roles
 
 # Custom decorator for manager-only routes
 def manager_required(f):
@@ -15,7 +22,7 @@ def manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or (current_user.role != 'Admin' and current_user.role != 'Manager'):
+        if not current_user.is_authenticated or not (user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager')):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('clients.list_clients'))
         return f(*args, **kwargs)
@@ -24,21 +31,18 @@ def manager_required(f):
 @clients_bp.route('/')
 @login_required
 def list_clients():
-    """
-    Display a list of clients based on user role.
-    Different user roles may see different clients.
-    """
-    if current_user.role == 'Admin' or current_user.role == 'Manager':
+    """Display a list of all clients."""
+    # Get clients based on user role
+    if user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager'):
         # Admins and Managers see all clients
         clients = Client.query.all()
-    elif current_user.role == 'Project Manager':
+    elif user_has_role(current_user, 'Project Manager'):
         # Project Managers see clients with projects they manage
-        # TODO: Implement filtering for project managers
-        clients = Client.query.all()
-    else:  # Consultant
-        # Consultants see clients with projects they're assigned to
-        # TODO: Implement filtering for consultants
-        clients = Client.query.all()
+        client_ids = db.session.query(Project.client_id).filter_by(manager_id=current_user.id).distinct()
+        clients = Client.query.filter(Client.id.in_(client_ids)).all()
+    else:
+        # Other users don't see any clients
+        clients = []
     
     return render_template('clients/list.html', clients=clients)
 

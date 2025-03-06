@@ -47,7 +47,12 @@
                             <i class="fas fa-box"></i> Product Catalog
                         </a>
                     </li>
-                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('consultants.list_consultants') }}">
+                            <i class="fas fa-user-tie"></i> Consultants
+                        </a>
+                    </li>
+                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-cogs"></i> Admin
@@ -56,6 +61,16 @@
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('admin.users') }}">
                                     <i class="fas fa-users"></i> User Management
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin.settings') }}">
+                                    <i class="fas fa-sliders-h"></i> Settings
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin.lists') }}">
+                                    <i class="fas fa-list"></i> Manage Lists
                                 </a>
                             </li>
                             <li>

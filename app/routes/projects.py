@@ -1,9 +1,39 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from ..models import db, Project, ProjectTemplate, PhaseTemplate, User, Client, ProductService
+from ..models import db, Project, ProjectTemplate, PhaseTemplate, User, Client, ProductService, Role
 from functools import wraps
+import os
+import json
+from datetime import datetime
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
+
+# Helper function to load settings
+def load_settings():
+    """Load settings from JSON file"""
+    settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'settings.json')
+    try:
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"Error loading settings: {e}")
+        return {}
+
+# Helper function to check if user has a specific role
+def user_has_role(user, role_name):
+    """Check if a user has a specific role."""
+    role = Role.query.filter_by(name=role_name).first()
+    return role in user.roles
+
+# Helper function to check if user has any of the specified roles
+def user_has_any_role(user, role_names):
+    """Check if a user has any of the specified roles."""
+    for role_name in role_names:
+        if user_has_role(user, role_name):
+            return True
+    return False
 
 # Custom decorator for manager-only routes
 def manager_required(f):
@@ -13,7 +43,7 @@ def manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or (current_user.role != 'Admin' and current_user.role != 'Manager'):
+        if not current_user.is_authenticated or not user_has_any_role(current_user, ['Admin', 'Manager']):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('projects.list_projects'))
         return f(*args, **kwargs)
@@ -27,11 +57,7 @@ def project_manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or (
-            current_user.role != 'Admin' and 
-            current_user.role != 'Manager' and 
-            current_user.role != 'Project Manager'
-        ):
+        if not current_user.is_authenticated or not user_has_any_role(current_user, ['Admin', 'Manager', 'Project Manager']):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('projects.list_projects'))
         return f(*args, **kwargs)
@@ -44,10 +70,10 @@ def list_projects():
     Display a list of projects based on user role.
     Different user roles see different projects.
     """
-    if current_user.role == 'Admin' or current_user.role == 'Manager':
+    if user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager'):
         # Admins and Managers see all projects
         projects = Project.query.all()
-    elif current_user.role == 'Project Manager':
+    elif user_has_role(current_user, 'Project Manager'):
         # Project Managers see projects they manage
         projects = Project.query.filter_by(manager_id=current_user.id).all()
     else:  # Consultant
@@ -69,7 +95,7 @@ def create_project():
     """
     # Get clients and managers for dropdown
     clients = Client.query.all()
-    managers = User.query.filter(User.role.in_(['Admin', 'Manager', 'Project Manager'])).all()
+    managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     templates = ProjectTemplate.query.all()
     
     if request.method == 'POST':
@@ -133,13 +159,13 @@ def edit_project(project_id):
     project = Project.query.get_or_404(project_id)
     
     # Check if user has permission to edit this project
-    if current_user.role == 'Project Manager' and project.manager_id != current_user.id:
+    if user_has_role(current_user, 'Project Manager') and project.manager_id != current_user.id:
         flash('You do not have permission to edit this project.', 'danger')
         return redirect(url_for('projects.list_projects'))
     
     # Get clients and managers for dropdown
     clients = Client.query.all()
-    managers = User.query.filter(User.role.in_(['Admin', 'Manager', 'Project Manager'])).all()
+    managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     
     if request.method == 'POST':
         # Get form data
@@ -195,9 +221,9 @@ def view_project(project_id):
     project = Project.query.get_or_404(project_id)
     
     # Check if user has permission to view this project
-    if current_user.role == 'Project Manager' and project.manager_id != current_user.id:
+    if user_has_role(current_user, 'Project Manager') and project.manager_id != current_user.id:
         # TODO: Check if consultant is assigned to this project
-        if current_user.role == 'Consultant':
+        if user_has_role(current_user, 'Consultant'):
             flash('You do not have permission to view this project.', 'danger')
             return redirect(url_for('projects.list_projects'))
     
@@ -225,7 +251,7 @@ def create_template():
     """
     # Get clients and managers for dropdown
     clients = Client.query.all()
-    managers = User.query.filter(User.role.in_(['Admin', 'Manager'])).all()
+    managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     products = ProductService.query.all()
     
     if request.method == 'POST':
@@ -299,7 +325,7 @@ def edit_template(template_id):
     
     # Get clients and managers for dropdown
     clients = Client.query.all()
-    managers = User.query.filter(User.role.in_(['Admin', 'Manager'])).all()
+    managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     products = ProductService.query.all()
     
     if request.method == 'POST':

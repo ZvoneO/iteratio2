@@ -1,9 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from ..models import db, ProductService, ProductGroup
+from ..models import db, ProductService, ProductGroup, Role
 from functools import wraps
 
 catalog_bp = Blueprint('catalog', __name__, url_prefix='/catalog')
+
+# Helper function to check if user has a specific role
+def user_has_role(user, role_name):
+    """Check if a user has a specific role."""
+    role = Role.query.filter_by(name=role_name).first()
+    return role in user.roles
 
 # Custom decorator for manager-only routes
 def manager_required(f):
@@ -13,7 +19,7 @@ def manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or (current_user.role != 'Admin' and current_user.role != 'Manager'):
+        if not current_user.is_authenticated or not (user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager')):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('catalog.list_products'))
         return f(*args, **kwargs)

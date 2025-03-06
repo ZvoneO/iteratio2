@@ -93,14 +93,19 @@ def dashboard():
     user_count = 0
     consultant_count = 0
     
+    # Get role objects
+    admin_role = Role.query.filter_by(name='Admin').first()
+    manager_role = Role.query.filter_by(name='Manager').first()
+    project_manager_role = Role.query.filter_by(name='Project Manager').first()
+    
     # Get counts based on user role
-    if current_user.role == 'Admin' or current_user.role == 'Manager':
+    if admin_role in current_user.roles or manager_role in current_user.roles:
         # Admins and Managers see all projects, clients, and users
         project_count = Project.query.count()
         client_count = Client.query.count()
         user_count = User.query.count()
         consultant_count = Consultant.query.count()
-    elif current_user.role == 'Project Manager':
+    elif project_manager_role in current_user.roles:
         # Project Managers see their assigned projects
         project_count = Project.query.filter_by(manager_id=current_user.id).count()
         # Get clients with projects managed by this user
