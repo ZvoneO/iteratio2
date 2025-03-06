@@ -68,7 +68,11 @@
                             </td>
                             <td>{{ user.username }}</td>
                             <td>{{ user.email }}</td>
-                            <td><span class="badge bg-info">{{ user.role.name }}</span></td>
+                            <td>
+                                {% for role in user.roles %}
+                                <span class="badge bg-info">{{ role.name }}</span>
+                                {% endfor %}
+                            </td>
                             <td>{{ user.department or 'Not specified' }}</td>
                             <td>
                                 {% if user.is_active %}

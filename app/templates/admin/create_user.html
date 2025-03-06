@@ -48,13 +48,11 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="" selected disabled>Select a role</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Manager">Manager</option>
-                            <option value="Project Manager">Project Manager</option>
-                            <option value="Consultant">Consultant</option>
+                        <label for="roles" class="form-label">Roles</label>
+                        <select class="form-select" id="roles" name="roles[]" multiple required>
+                            {% for role in roles %}
+                                <option value="{{ role.name }}">{{ role.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="d-grid gap-2">

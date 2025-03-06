@@ -49,12 +49,11 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="Admin" {% if user.role == 'Admin' %}selected{% endif %}>Admin</option>
-                            <option value="Manager" {% if user.role == 'Manager' %}selected{% endif %}>Manager</option>
-                            <option value="Project Manager" {% if user.role == 'Project Manager' %}selected{% endif %}>Project Manager</option>
-                            <option value="Consultant" {% if user.role == 'Consultant' %}selected{% endif %}>Consultant</option>
+                        <label for="roles" class="form-label">Roles</label>
+                        <select class="form-select" id="roles" name="roles[]" multiple required>
+                            {% for role in roles %}
+                                <option value="{{ role.name }}" {% if role in user.roles %}selected{% endif %}>{{ role.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3 form-check">
