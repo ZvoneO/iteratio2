@@ -1,202 +1,191 @@
 {% extends 'base.html' %}
 
-{% block title %}Admin Dashboard - Resource Planning Application{% endblock %}
+{% block title %}Dashboard - Resource Planning Application{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-        <div>
-            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-primary">
-                <i class="fas fa-cog"></i> Settings
-            </a>
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+            <small class="text-muted">Welcome, {{ current_user.username }}</small>
+        </h1>
+        <p class="lead">Overview of your resource planning data</p>
+    </div>
+</div>
+
+<!-- Role-based dashboard content -->
+<div class="row">
+    <!-- Projects Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-primary h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-project-diagram"></i> Projects</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ project_count }}</h1>
+                <p class="card-text">
+                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                        Total Projects
+                    {% else %}
+                        Assigned Projects
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-primary btn-sm w-100">
+                    View Projects
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 col-xl-3 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Projects</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ project_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
-                <div class="card-footer bg-transparent border-0">
-                    <a href="{{ url_for('projects.index') }}" class="btn btn-sm btn-primary w-100">
-                        <i class="fas fa-arrow-right"></i> View All
-                    </a>
-                </div>
-                {% endif %}
+    <!-- Clients Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-building"></i> Clients</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ client_count }}</h1>
+                <p class="card-text">
+                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                        Total Clients
+                    {% else %}
+                        Associated Clients
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('clients.list_clients') }}" class="btn btn-outline-success btn-sm w-100">
+                    View Clients
+                </a>
             </div>
         </div>
-
-        <div class="col-md-6 col-xl-3 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Clients</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ client_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-building fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
-                <div class="card-footer bg-transparent border-0">
-                    <a href="{{ url_for('clients.list_clients') }}" class="btn btn-sm btn-success w-100">
-                        <i class="fas fa-arrow-right"></i> View All
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="col-md-6 col-xl-3 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Consultants</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ consultant_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-0">
-                    <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-sm btn-info w-100">
-                        <i class="fas fa-arrow-right"></i> View All
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
-        <div class="col-md-6 col-xl-3 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Users</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ user_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-cog fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-0">
-                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-warning w-100">
-                        <i class="fas fa-arrow-right"></i> View All
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
-    <div class="row">
-        {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Projects</h6>
-                    <a href="{{ url_for('projects.index') }}" class="btn btn-sm btn-primary">
-                        View All
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Project</th>
-                                    <th>Client</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- TODO: Add recent projects -->
-                                <tr>
-                                    <td colspan="4" class="text-center">No projects found</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <!-- Users/Consultants Card -->
+    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-info h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Users</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ user_count }}</h1>
+                <p class="card-text">Total Users</p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-info btn-sm w-100">
+                    Manage Users
+                </a>
             </div>
         </div>
-        {% elif 'Project Manager' in current_user.roles|map(attribute='name') %}
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">My Projects</h6>
-                    <a href="{{ url_for('projects.index') }}" class="btn btn-sm btn-primary">
-                        View All
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Project</th>
-                                    <th>Client</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- TODO: Add project manager's projects -->
-                                <tr>
-                                    <td colspan="4" class="text-center">No projects found</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+    </div>
+    {% endif %}
 
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">System Status</h6>
+    <!-- Consultants Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-warning h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-user-tie"></i> Consultants</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ consultant_count }}</h1>
+                <p class="card-text">
+                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                        Total Consultants
+                    {% else %}
+                        Team Members
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-outline-warning btn-sm w-100">
+                    View Consultants
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> New Project
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('clients.create_client') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-plus"></i> New Client
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.create_user') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-user-plus"></i> New User
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.lists') }}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-list"></i> Manage Lists
+                        </a>
+                    </div>
+                    {% elif 'Project Manager' in current_user.roles|map(attribute='name') %}
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> New Project
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-tasks"></i> Manage Tasks
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-info w-100">
+                            <i class="fas fa-calendar-alt"></i> View Calendar
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-clipboard-list"></i> My Tasks
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="#" class="btn btn-outline-info w-100">
+                            <i class="fas fa-calendar-alt"></i> My Calendar
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-project-diagram"></i> My Projects
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="card-body">
-                    <h4 class="small font-weight-bold">Database <span class="float-right">Connected</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Storage <span class="float-right">20%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: 20%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Server Load <span class="float-right">40%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Memory Usage <span class="float-right">60%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section (Placeholder) -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center">Recent activity will be displayed here in future updates.</p>
             </div>
         </div>
     </div>

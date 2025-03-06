@@ -20,8 +20,15 @@ flask db upgrade
 echo "Setting up roles..."
 python scripts/data_migration.py
 
-# 5. Start the application
+# 5. Start the application with a different port if 5000 is in use
 echo "Starting the application..."
-python run.py
+# Check if port 5000 is in use
+if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Port 5000 is already in use. Using port 5001 instead."
+    export FLASK_RUN_PORT=5001
+    python run.py
+else
+    python run.py
+fi
 
 echo "Application started!" 
