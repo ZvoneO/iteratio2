@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ list.name }} Items - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-list"></i> {{ list.name }} Items
+        </h1>
+        <p class="lead">{{ list.description }}</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('admin.create_list_item', list_id=list.id) }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Item
+        </a>
+        <a href="{{ url_for('admin.lists') }}" class="btn btn-outline-secondary ms-2">
+            <i class="fas fa-arrow-left"></i> Back to Lists
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Items</h5>
+            </div>
+            <div class="card-body">
+                {% if items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Order</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.value }}</td>
+                                <td>{{ item.description }}</td>
+                                <td>{{ item.order }}</td>
+                                <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary edit-item" data-id="{{ item.id }}" data-value="{{ item.value }}" data-description="{{ item.description }}" data-order="{{ item.order }}">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-item" data-id="{{ item.id }}" data-value="{{ item.value }}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No items have been added to this list yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editItemForm" method="POST">
+                    <input type="hidden" id="edit-item-id" name="item_id">
+                    
+                    <div class="mb-3">
+                        <label for="edit-value" class="form-label">Value <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit-value" name="value" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-order" class="form-label">Order</label>
+                        <input type="number" class="form-control" id="edit-order" name="order">
+                        <div class="form-text">Optional numeric value for sorting (lower values appear first)</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveItemChanges">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Item Modal -->
+<div class="modal fade" id="deleteItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the item "<span id="delete-item-value"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteItemForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Edit item button click
+        const editButtons = document.querySelectorAll('.edit-item');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const value = this.getAttribute('data-value');
+                const description = this.getAttribute('data-description');
+                const order = this.getAttribute('data-order');
+                
+                // Populate form
+                document.getElementById('edit-item-id').value = id;
+                document.getElementById('edit-value').value = value;
+                document.getElementById('edit-description').value = description || '';
+                document.getElementById('edit-order').value = order || '';
+                
+                // Set form action
+                document.getElementById('editItemForm').action = `/admin/lists/items/${id}/edit`;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+                modal.show();
+            });
+        });
+        
+        // Save item changes button click
+        document.getElementById('saveItemChanges').addEventListener('click', function() {
+            document.getElementById('editItemForm').submit();
+        });
+        
+        // Delete item button click
+        const deleteButtons = document.querySelectorAll('.delete-item');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const value = this.getAttribute('data-value');
+                
+                // Populate modal
+                document.getElementById('delete-item-value').textContent = value;
+                
+                // Set form action
+                document.getElementById('deleteItemForm').action = `/admin/lists/items/${id}/delete`;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endblock %} 

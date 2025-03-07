@@ -18,13 +18,13 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(128))
     first_name = db.Column(db.String(50))
     last_name = db.Column(db.String(50))
-    role = db.Column(db.String(20))  # Admin, Manager, Project Manager, Consultant
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     consultants = db.relationship('Consultant', backref='user', lazy=True)
+    roles = db.relationship('Role', secondary='user_roles', backref=db.backref('users', lazy=True))
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -42,8 +42,10 @@ class Consultant(db.Model):
     name = db.Column(db.String(50), nullable=False)
     surname = db.Column(db.String(50), nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
-    availability_days_per_month = db.Column(db.Integer)
-    status = db.Column(db.String(20))  # Active, Inactive, On Leave
+    email = db.Column(db.String(120))
+    phone_number = db.Column(db.String(20))
+    availability_days_per_month = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='Active')  # Active, Inactive, On Leave
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     notes = db.Column(db.Text)
@@ -283,6 +285,23 @@ project_products = db.Table('project_products',
     db.Column('project_id', db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), primary_key=True),
     db.Column('product_id', db.Integer, db.ForeignKey('products_services.id', ondelete='CASCADE'), primary_key=True)
 )
+
+# Association table for User and Role
+user_roles = db.Table('user_roles',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('role_id', db.Integer, db.ForeignKey('roles.id'), primary_key=True)
+)
+
+# Role model for defining user roles
+class Role(db.Model):
+    """
+    Role model for defining user roles.
+    """
+    __tablename__ = 'roles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)
+    description = db.Column(db.String(100))
 
 # TODO: Add Task model for project task management
 # TODO: Add Document model for file attachments

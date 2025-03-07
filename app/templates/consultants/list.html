@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultants - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-user-tie"></i> Consultants
+        </h1>
+        <p class="lead">Manage consultants and their expertise</p>
+    </div>
+    <div class="col-auto">
+        {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+        <a href="{{ url_for('consultants.create_consultant') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Consultant
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <form method="GET" action="{{ url_for('consultants.list_consultants') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Name or expertise" value="{{ request.args.get('search', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Statuses</option>
+                            {% for status in statuses %}
+                            <option value="{{ status.value }}" {% if request.args.get('status') == status.value %}selected{% endif %}>{{ status.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="expertise" class="form-label">Expertise</label>
+                        <select class="form-select" id="expertise" name="expertise">
+                            <option value="">All Expertise</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if request.args.get('expertise') == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Consultants</h5>
+            </div>
+            <div class="card-body">
+                {% if consultants %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Availability</th>
+                                <th>Expertise</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consultant in consultants %}
+                            <tr>
+                                <td>{{ consultant.full_name }}</td>
+                                <td>
+                                    {% if consultant.status == 'Active' %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% elif consultant.status == 'Inactive' %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% elif consultant.status == 'On Leave' %}
+                                    <span class="badge bg-warning">On Leave</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ consultant.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ consultant.availability_days_per_month }} days/month</td>
+                                <td>
+                                    {% for expertise in consultant.expertise %}
+                                    <span class="badge bg-info">{{ expertise.category.name }} ({{ expertise.rating }}/5)</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('consultants.view_consultant', consultant_id=consultant.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                                    <a href="{{ url_for('consultants.edit_consultant', consultant_id=consultant.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-consultant" data-id="{{ consultant.id }}" data-name="{{ consultant.full_name }}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No consultants found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Consultant Modal -->
+<div class="modal fade" id="deleteConsultantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Consultant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the consultant "<span id="delete-consultant-name"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteConsultantForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Delete consultant button click
+        const deleteButtons = document.querySelectorAll('.delete-consultant');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                
+                // Populate modal
+                document.getElementById('delete-consultant-name').textContent = name;
+                
+                // Set form action
+                document.getElementById('deleteConsultantForm').action = `/consultants/delete/${id}`;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteConsultantModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endblock %} 

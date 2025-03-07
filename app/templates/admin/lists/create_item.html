@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Item to {{ list.name }} - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-plus-circle"></i> Add Item to {{ list.name }}
+        </h1>
+        <p class="lead">Add a new item to the "{{ list.name }}" list</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('admin.list_items', list_id=list.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Items
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Item Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.create_list_item', list_id=list.id) }}">
+                    <div class="mb-3">
+                        <label for="value" class="form-label">Value <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="value" name="value" required>
+                        <div class="form-text">The value that will be stored in the database</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        <div class="form-text">Optional description or additional information about this item</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="order" class="form-label">Order</label>
+                        <input type="number" class="form-control" id="order" name="order">
+                        <div class="form-text">Optional numeric value for sorting (lower values appear first)</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('admin.list_items', list_id=list.id) }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Add Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">About List Items</h5>
+            </div>
+            <div class="card-body">
+                <p>List items are the individual values that will appear in dropdown menus throughout the application.</p>
+                <p>Each item has:</p>
+                <ul>
+                    <li><strong>Value:</strong> The text that appears in the dropdown</li>
+                    <li><strong>Description:</strong> Optional additional information</li>
+                    <li><strong>Order:</strong> Optional numeric value for sorting</li>
+                </ul>
+                <p class="mb-0">Items with lower order values will appear first in dropdown menus.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

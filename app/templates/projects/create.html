@@ -25,33 +25,17 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('projects.create_project') }}">
-                    {{ form.csrf_token }}
-                    
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="name" class="form-label">Project Name <span class="text-danger">*</span></label>
-                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Enter project name") }}
-                                {% if form.name.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.name.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <input type="text" class="form-control" id="name" name="name" placeholder="Enter project name" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="code" class="form-label">Project Code</label>
-                                {{ form.code(class="form-control" + (" is-invalid" if form.code.errors else ""), placeholder="Enter project code") }}
-                                {% if form.code.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.code.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <input type="text" class="form-control" id="code" name="code" placeholder="Enter project code">
                                 <div class="form-text">Optional unique identifier for this project</div>
                             </div>
                         </div>
@@ -61,27 +45,25 @@
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="client_id" class="form-label">Client</label>
-                                {{ form.client_id(class="form-control" + (" is-invalid" if form.client_id.errors else "")) }}
-                                {% if form.client_id.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.client_id.errors %}
-                                    {{ error }}
+                                <select class="form-control" id="client_id" name="client_id">
+                                    <option value="">Select a client</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}">{{ client.name }}</option>
                                     {% endfor %}
-                                </div>
-                                {% endif %}
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                                {{ form.status(class="form-control" + (" is-invalid" if form.status.errors else "")) }}
-                                {% if form.status.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.status.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <select class="form-control" id="status" name="status" required>
+                                    <option value="">Select a status</option>
+                                    <option value="Planning">Planning</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="On Hold">On Hold</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -90,27 +72,13 @@
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="start_date" class="form-label">Start Date</label>
-                                {{ form.start_date(class="form-control" + (" is-invalid" if form.start_date.errors else ""), type="date") }}
-                                {% if form.start_date.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.start_date.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <input type="date" class="form-control" id="start_date" name="start_date">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="end_date" class="form-label">End Date</label>
-                                {{ form.end_date(class="form-control" + (" is-invalid" if form.end_date.errors else ""), type="date") }}
-                                {% if form.end_date.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.end_date.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <input type="date" class="form-control" id="end_date" name="end_date">
                             </div>
                         </div>
                     </div>
@@ -121,54 +89,32 @@
                                 <label for="budget" class="form-label">Budget</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    {{ form.budget(class="form-control" + (" is-invalid" if form.budget.errors else ""), placeholder="0.00") }}
-                                    {% if form.budget.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.budget.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
+                                    <input type="number" step="0.01" class="form-control" id="budget" name="budget" placeholder="0.00">
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="priority" class="form-label">Priority</label>
-                                {{ form.priority(class="form-control" + (" is-invalid" if form.priority.errors else "")) }}
-                                {% if form.priority.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.priority.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                                <select class="form-control" id="priority" name="priority">
+                                    <option value="">Select a priority</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Critical">Critical</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-group mb-3">
                         <label for="description" class="form-label">Description</label>
-                        {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4, placeholder="Enter project description") }}
-                        {% if form.description.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.description.errors %}
-                            {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter project description"></textarea>
                     </div>
                     
                     <div class="form-group mb-3">
                         <label for="notes" class="form-label">Notes</label>
-                        {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3, placeholder="Enter any additional notes") }}
-                        {% if form.notes.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.notes.errors %}
-                            {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Enter any additional notes"></textarea>
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">

@@ -55,11 +55,13 @@ def create_app(config_class=None):
     from .routes.projects import projects_bp
     from .routes.clients import clients_bp
     from .routes.catalog import catalog_bp
+    from .routes.consultants import consultants_bp
     
     app.register_blueprint(admin_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(catalog_bp)
+    app.register_blueprint(consultants_bp)
     
     # Create auth blueprint for login/logout
     from .routes.auth import auth_bp

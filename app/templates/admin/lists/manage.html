@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if list %}Edit {{ list.name }}{% else %}Create List{% endif %} - Resource Planning Application{% endblock %}
+
+{% block extra_css %}
+<style>
+    .item-row {
+        transition: background-color 0.2s;
+    }
+    .item-row:hover {
+        background-color: rgba(0,0,0,0.03);
+    }
+    .drag-handle {
+        cursor: move;
+        color: #aaa;
+    }
+    .item-actions {
+        visibility: hidden;
+    }
+    .item-row:hover .item-actions {
+        visibility: visible;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-{% if list %}edit{% else %}plus-circle{% endif %}"></i> 
+            {% if list %}Edit {{ list.name }}{% else %}Create List{% endif %}
+        </h1>
+        <p class="lead">{% if list %}Edit list and manage items{% else %}Create a new list and add items{% endif %}</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('admin.lists') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Lists
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="POST" action="{% if list %}{{ url_for('admin.manage_list', list_id=list.id) }}{% else %}{{ url_for('admin.manage_list', list_id=0) }}{% endif %}" id="listForm">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">List Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="list_name" class="form-label">List Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="list_name" name="list_name" value="{{ list.name if list else '' }}" required>
+                        <div class="form-text">A descriptive name for this list (e.g. "Countries", "Industries")</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="list_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="list_description" name="list_description" rows="2">{{ list.description if list else '' }}</textarea>
+                        <div class="form-text">Optional description of what this list represents</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">List Items</h5>
+                    <button type="button" class="btn btn-sm btn-success" id="add-item-btn">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" id="no-items-alert" {% if items %}style="display: none;"{% endif %}>
+                        <i class="fas fa-info-circle"></i> No items have been added to this list yet.
+                    </div>
+                    
+                    <div class="table-responsive" id="items-table-container" {% if not items %}style="display: none;"{% endif %}>
+                        <table class="table table-hover" id="items-table">
+                            <thead>
+                                <tr>
+                                    <th width="5%"></th>
+                                    <th width="35%">Value</th>
+                                    <th width="45%">Description</th>
+                                    <th width="10%">Order</th>
+                                    <th width="5%">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-tbody">
+                                {% for item in items %}
+                                <tr class="item-row">
+                                    <td>
+                                        <i class="fas fa-grip-vertical drag-handle"></i>
+                                        <input type="hidden" name="item_id[]" value="{{ item.id }}">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="item_value[]" value="{{ item.value }}" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="item_description[]" value="{{ item.description or '' }}">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control" name="item_order[]" value="{{ item.order or loop.index }}" min="1">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-danger delete-item">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('admin.lists') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save List
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">About Lists</h5>
+            </div>
+            <div class="card-body">
+                <p>Lists help you organize dropdown values that can be used throughout the application.</p>
+                <p>Examples of lists might include:</p>
+                <ul>
+                    <li>Countries</li>
+                    <li>Industries</li>
+                    <li>Departments</li>
+                    <li>Job Titles</li>
+                    <li>Skills</li>
+                </ul>
+                <p class="mb-0">Each list item has:</p>
+                <ul class="mb-0">
+                    <li><strong>Value:</strong> The text that appears in the dropdown</li>
+                    <li><strong>Description:</strong> Optional additional information</li>
+                    <li><strong>Order:</strong> Optional numeric value for sorting</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemsContainer = document.getElementById('items-tbody');
+        const noItemsAlert = document.getElementById('no-items-alert');
+        const itemsTableContainer = document.getElementById('items-table-container');
+        
+        // Initialize sortable
+        new Sortable(itemsContainer, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function() {
+                // Update order inputs after drag
+                updateItemOrders();
+            }
+        });
+        
+        // Add item button
+        document.getElementById('add-item-btn').addEventListener('click', function() {
+            addNewItem();
+            
+            // Show table, hide alert
+            noItemsAlert.style.display = 'none';
+            itemsTableContainer.style.display = 'block';
+        });
+        
+        // Delete item buttons
+        function setupDeleteButtons() {
+            document.querySelectorAll('.delete-item').forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    row.remove();
+                    
+                    // If no items left, show alert and hide table
+                    if (itemsContainer.children.length === 0) {
+                        noItemsAlert.style.display = 'block';
+                        itemsTableContainer.style.display = 'none';
+                    }
+                    
+                    // Update order inputs
+                    updateItemOrders();
+                });
+            });
+        }
+        
+        // Initial setup for delete buttons
+        setupDeleteButtons();
+        
+        // Function to add a new item
+        function addNewItem() {
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row';
+            
+            const nextOrder = itemsContainer.children.length + 1;
+            
+            newRow.innerHTML = `
+                <td>
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                    <input type="hidden" name="item_id[]" value="">
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="item_value[]" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="item_description[]">
+                </td>
+                <td>
+                    <input type="number" class="form-control" name="item_order[]" value="${nextOrder}" min="1">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger delete-item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            itemsContainer.appendChild(newRow);
+            
+            // Setup delete button for new row
+            newRow.querySelector('.delete-item').addEventListener('click', function() {
+                newRow.remove();
+                
+                // If no items left, show alert and hide table
+                if (itemsContainer.children.length === 0) {
+                    noItemsAlert.style.display = 'block';
+                    itemsTableContainer.style.display = 'none';
+                }
+                
+                // Update order inputs
+                updateItemOrders();
+            });
+        }
+        
+        // Function to update order inputs after drag
+        function updateItemOrders() {
+            const rows = itemsContainer.querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                const orderInput = row.querySelector('input[name="item_order[]"]');
+                if (!orderInput.value) {
+                    orderInput.value = index + 1;
+                }
+            });
+        }
+        
+        // Form validation
+        document.getElementById('listForm').addEventListener('submit', function(e) {
+            const listName = document.getElementById('list_name').value.trim();
+            if (!listName) {
+                e.preventDefault();
+                alert('List name is required.');
+                return;
+            }
+            
+            // Check if there are any items
+            if (itemsContainer.children.length === 0) {
+                if (!confirm('You are about to save a list with no items. Continue?')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+            
+            // Check for empty item values
+            let hasEmptyValues = false;
+            document.querySelectorAll('input[name="item_value[]"]').forEach(input => {
+                if (!input.value.trim()) {
+                    hasEmptyValues = true;
+                }
+            });
+            
+            if (hasEmptyValues) {
+                e.preventDefault();
+                alert('All item values must be filled.');
+                return;
+            }
+        });
+    });
+</script>
+{% endblock %} 

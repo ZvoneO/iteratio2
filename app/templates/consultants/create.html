@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Consultant - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-user-plus"></i> Create Consultant
+        </h1>
+        <p class="lead">Add a new consultant to the system</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Consultants
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Consultant Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('consultants.create_consultant') }}">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="user_id" class="form-label">User Account <span class="text-danger">*</span></label>
+                                <select class="form-control" id="user_id" name="user_id" required>
+                                    <option value="">Select a user</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Link to an existing user account</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="name" class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="surname" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="surname" name="surname" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-control" id="status" name="status">
+                                    <option value="">Select a status</option>
+                                    {% for status in statuses %}
+                                    <option value="{{ status.value }}">{{ status.value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="availability_days" class="form-label">Availability (days/month)</label>
+                                <input type="number" class="form-control" id="availability_days" name="availability_days" min="0" max="31">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="phone_number" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="calendar_name" class="form-label">Calendar Name</label>
+                        <input type="text" class="form-control" id="calendar_name" name="calendar_name">
+                        <div class="form-text">Name used in calendar/scheduling systems</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    
+                    {% if categories %}
+                    <hr>
+                    <h5 class="mb-3">Expertise</h5>
+                    
+                    {% for category in categories %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ category.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="expertise_{{ category.id }}" class="form-label">Rating (1-5)</label>
+                                    <select class="form-control" id="expertise_{{ category.id }}" name="expertise_{{ category.id }}">
+                                        <option value="">Not applicable</option>
+                                        <option value="1">1 - Basic knowledge</option>
+                                        <option value="2">2 - Limited experience</option>
+                                        <option value="3">3 - Practical application</option>
+                                        <option value="4">4 - Deep understanding</option>
+                                        <option value="5">5 - Expert level</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="expertise_notes_{{ category.id }}" class="form-label">Notes</label>
+                                    <textarea class="form-control" id="expertise_notes_{{ category.id }}" name="expertise_notes_{{ category.id }}" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <button type="reset" class="btn btn-outline-secondary me-md-2">Reset</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Create Consultant
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Consultant Creation Guide</h5>
+            </div>
+            <div class="card-body">
+                <h6>Required Fields</h6>
+                <ul class="mb-3">
+                    <li>User Account - Link to an existing user</li>
+                    <li>First Name - Consultant's first name</li>
+                    <li>Last Name - Consultant's last name</li>
+                </ul>
+                
+                <h6>Consultant Status</h6>
+                <ul class="mb-3">
+                    <li><span class="badge bg-success">Active</span> - Consultant is currently active</li>
+                    <li><span class="badge bg-secondary">Inactive</span> - Consultant is not currently active</li>
+                    <li><span class="badge bg-warning">On Leave</span> - Consultant is on leave</li>
+                </ul>
+                
+                <h6>Expertise Ratings</h6>
+                <p class="small">Rate each expertise category on a scale of 1-5:</p>
+                <ul class="small">
+                    <li><strong>1</strong> - Basic knowledge</li>
+                    <li><strong>2</strong> - Limited experience</li>
+                    <li><strong>3</strong> - Practical application</li>
+                    <li><strong>4</strong> - Deep understanding</li>
+                    <li><strong>5</strong> - Expert level</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

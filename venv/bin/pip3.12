@@ -1,4 +1,4 @@
-#!/home/zvone/develop/iteratio2/resource_planner/venv/bin/python3
+#!/home/zvone/develop/iteratio2/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
