@@ -8,114 +8,53 @@
         <h1 class="h2">
             <i class="fas fa-layer-group"></i> Product Groups
         </h1>
-        <p class="lead">Manage product and service categories</p>
+        <p class="lead">Manage product groups for organizing products and services</p>
     </div>
     <div class="col-auto">
-        {% if current_user.role in ['Admin', 'Manager'] %}
         <a href="{{ url_for('catalog.create_group') }}" class="btn btn-primary">
-            <i class="fas fa-plus-circle"></i> New Group
+            <i class="fas fa-plus"></i> Add Group
         </a>
-        {% endif %}
     </div>
 </div>
 
-<div class="card shadow">
-    <div class="card-body p-0">
-        {% if groups|length > 0 %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Products</th>
-                        <th>Created</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for group in groups %}
-                    <tr>
-                        <td class="fw-bold">{{ group.name }}</td>
-                        <td>{{ group.description|truncate(100) if group.description else '-' }}</td>
-                        <td>
-                            <span class="badge bg-primary">{{ group.products|length }} products</span>
-                        </td>
-                        <td>{{ group.created_at.strftime('%b %d, %Y') }}</td>
-                        <td class="text-end">
-                            <div class="btn-group">
-                                {% if current_user.role in ['Admin', 'Manager'] %}
-                                <a href="{{ url_for('catalog.edit_group', group_id=group.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-secondary" 
-                                        data-bs-toggle="modal" data-bs-target="#viewProductsModal{{ group.id }}">
-                                    <i class="fas fa-list"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <div class="mb-3">
-                <i class="fas fa-layer-group fa-3x text-muted"></i>
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Product Groups</h5>
             </div>
-            <h5>No Product Groups Found</h5>
-            <p class="text-muted">
-                Product groups help you organize your catalog items.
-                {% if current_user.role in ['Admin', 'Manager'] %}
-                <a href="{{ url_for('catalog.create_group') }}">Create your first group</a>
-                {% endif %}
-            </p>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Product List Modals -->
-{% for group in groups %}
-<div class="modal fade" id="viewProductsModal{{ group.id }}" tabindex="-1" aria-labelledby="viewProductsModalLabel{{ group.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewProductsModalLabel{{ group.id }}">
-                    Products in {{ group.name }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                {% if group.products|length > 0 %}
+            <div class="card-body">
+                {% if groups %}
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
+                                <th>Description</th>
+                                <th>Products</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for product in group.products %}
+                            {% for group in groups %}
                             <tr>
-                                <td>{{ product.name }}</td>
-                                <td>{{ product.type }}</td>
+                                <td>{{ group.name }}</td>
+                                <td>{{ group.description }}</td>
                                 <td>
-                                    {% if product.active %}
-                                    <span class="badge bg-success">Active</span>
+                                    {% set product_count = group.products|length %}
+                                    {% if product_count > 0 %}
+                                        {{ product_count }} product{% if product_count != 1 %}s{% endif %}
                                     {% else %}
-                                    <span class="badge bg-secondary">Inactive</span>
+                                        No products
                                     {% endif %}
                                 </td>
-                                <td class="text-end">
-                                    <a href="{{ url_for('catalog.view_product', product_id=product.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i> View
+                                <td>
+                                    <a href="{{ url_for('catalog.edit_group', group_id=group.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i> Edit
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-group" data-id="{{ group.id }}" data-name="{{ group.name }}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -123,16 +62,59 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <p class="text-muted mb-0">No products in this group.</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No product groups found.
                 </div>
                 {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
-{% endfor %}
+
+<!-- Delete Group Modal -->
+<div class="modal fade" id="deleteGroupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Product Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the group "<span id="delete-group-name"></span>"?</p>
+                <p class="text-danger">This action cannot be undone and will remove all products in this group.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteGroupForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Delete group button click
+        const deleteButtons = document.querySelectorAll('.delete-group');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                
+                // Populate modal
+                document.getElementById('delete-group-name').textContent = name;
+                
+                // Set form action
+                document.getElementById('deleteGroupForm').action = `/catalog/groups/delete/${id}`;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteGroupModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
 {% endblock %} 

@@ -6,8 +6,8 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3"><i class="fas fa-users"></i> User Management</h1>
-        <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
-            <i class="fas fa-user-plus"></i> Add New User
+        <a href="{{ url_for('admin.manage_user') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Add User
         </a>
     </div>
 
@@ -84,35 +84,12 @@
                             <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="{{ url_for('admin.manage_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
-                                        <i class="fas fa-trash"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-user" data-id="{{ user.id }}" data-name="{{ user.username }}">
+                                        <i class="fas fa-trash"></i> Delete
                                     </button>
-                                </div>
-                                
-                                <!-- Delete User Modal -->
-                                <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Confirm Deletion</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                Are you sure you want to delete user <strong>{{ user.first_name }} {{ user.last_name }}</strong>?
-                                                This action cannot be undone.
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="d-inline">
-                                                    <button type="submit" class="btn btn-danger">Delete User</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </td>
                         </tr>

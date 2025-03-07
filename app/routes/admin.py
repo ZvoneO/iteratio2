@@ -1,64 +1,34 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from ..models import db, User, Role, Project, Client, Consultant, List, ListItem
 from werkzeug.security import generate_password_hash
-from ..models import db, User, Consultant, List, ListItem, Project, Client, Role
 from functools import wraps
 import json
 import os
+from ..utils import user_has_role, user_has_any_role, get_user_roles
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-# Path for settings JSON file
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'settings.json')
-
-# Helper function to load settings from JSON file
+# Helper function to load settings
 def load_settings():
-    """Load settings from JSON file or create default if not exists"""
-    if not os.path.exists(SETTINGS_FILE):
-        # Create default settings
-        default_settings = {
-            "project_statuses": [
-                {"value": "Planning", "description": "Project is in the planning phase"},
-                {"value": "In Progress", "description": "Project is currently active"},
-                {"value": "Completed", "description": "Project has been completed"},
-                {"value": "On Hold", "description": "Project is temporarily paused"},
-                {"value": "Cancelled", "description": "Project has been cancelled"}
-            ],
-            "consultant_statuses": [
-                {"value": "Active", "description": "Consultant is currently active"},
-                {"value": "Inactive", "description": "Consultant is not currently active"},
-                {"value": "On Leave", "description": "Consultant is on leave"}
-            ],
-            "priority_levels": [
-                {"value": "Low", "description": "Low priority"},
-                {"value": "Medium", "description": "Medium priority"},
-                {"value": "High", "description": "High priority"},
-                {"value": "Critical", "description": "Critical priority"}
-            ]
-        }
-        
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
-        
-        # Save default settings
-        with open(SETTINGS_FILE, 'w') as f:
-            json.dump(default_settings, f, indent=4)
-        
-        return default_settings
-    
-    # Load settings from file
+    """Load settings from JSON file"""
+    settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'settings.json')
     try:
-        with open(SETTINGS_FILE, 'r') as f:
-            return json.load(f)
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as f:
+                return json.load(f)
+        return {}
     except Exception as e:
         print(f"Error loading settings: {e}")
         return {}
 
-# Helper function to save settings to JSON file
+# Helper function to save settings
 def save_settings(settings):
     """Save settings to JSON file"""
+    settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'settings.json')
     try:
-        with open(SETTINGS_FILE, 'w') as f:
+        os.makedirs(os.path.dirname(settings_file), exist_ok=True)
+        with open(settings_file, 'w') as f:
             json.dump(settings, f, indent=4)
         return True
     except Exception as e:
@@ -69,12 +39,12 @@ def save_settings(settings):
 def admin_required(f):
     """
     Decorator to restrict access to admin users only.
+    Uses the robust role-checking function from utils.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check if user is admin
-        admin_role = Role.query.filter_by(name='Admin').first()
-        if not admin_role or admin_role not in current_user.roles:
+        # Check if user is admin using the utility function
+        if not current_user.is_authenticated or not (user_has_role(current_user, 'Admin') or current_user.username == 'admin'):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('main.index'))
         return f(*args, **kwargs)
@@ -86,6 +56,7 @@ def dashboard():
     """
     Display the admin dashboard with role-based content.
     Different user roles see different dashboard content.
+    Uses the robust role-checking functions from utils.
     """
     # Initialize counts
     project_count = 0
@@ -93,26 +64,40 @@ def dashboard():
     user_count = 0
     consultant_count = 0
     
-    # Get role objects
-    admin_role = Role.query.filter_by(name='Admin').first()
-    manager_role = Role.query.filter_by(name='Manager').first()
-    project_manager_role = Role.query.filter_by(name='Project Manager').first()
+    # Get user roles using the utility function
+    user_roles = get_user_roles(current_user)
+    
+    # Check if user is admin or manager
+    is_admin_or_manager = user_has_any_role(current_user, ['Admin', 'Manager']) or current_user.username == 'admin'
+    is_project_manager = user_has_role(current_user, 'Project Manager')
     
     # Get counts based on user role
-    if admin_role in current_user.roles or manager_role in current_user.roles:
+    if is_admin_or_manager:
         # Admins and Managers see all projects, clients, and users
         project_count = Project.query.count()
         client_count = Client.query.count()
         user_count = User.query.count()
-        consultant_count = Consultant.query.count()
-    elif project_manager_role in current_user.roles:
+        
+        # Count users with Consultant role instead of entries in consultants table
+        consultant_role = Role.query.filter_by(name='Consultant').first()
+        if consultant_role:
+            consultant_count = User.query.join(User.roles).filter(Role.id == consultant_role.id).count()
+        else:
+            consultant_count = 0
+    elif is_project_manager:
         # Project Managers see their assigned projects
         project_count = Project.query.filter_by(manager_id=current_user.id).count()
         # Get clients with projects managed by this user
         client_ids = db.session.query(Project.client_id).filter_by(manager_id=current_user.id).distinct()
         client_count = Client.query.filter(Client.id.in_(client_ids)).count()
         user_count = 0
-        consultant_count = Consultant.query.count()
+        
+        # Count users with Consultant role instead of entries in consultants table
+        consultant_role = Role.query.filter_by(name='Consultant').first()
+        if consultant_role:
+            consultant_count = User.query.join(User.roles).filter(Role.id == consultant_role.id).count()
+        else:
+            consultant_count = 0
     else:  # Consultant
         # Get consultant record for current user
         consultant = Consultant.query.filter_by(user_id=current_user.id).first()
@@ -128,13 +113,16 @@ def dashboard():
                           project_count=project_count,
                           client_count=client_count,
                           user_count=user_count,
-                          consultant_count=consultant_count)
+                          consultant_count=consultant_count,
+                          user_roles=user_roles)
 
 @admin_bp.route('/users')
 @login_required
 @admin_required
 def users():
-    """Display a list of all users for admin management."""
+    """
+    Display a list of all users.
+    """
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Number of items per page
@@ -187,16 +175,18 @@ def users():
         roles=roles
     )
 
+@admin_bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @admin_bp.route('/users/create', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def create_user():
+def manage_user(user_id=None):
     """
-    Handle user creation.
+    Handle user creation and editing.
+    If user_id is provided, edit existing user.
+    If user_id is None, create new user.
+    """
+    user = User.query.get_or_404(user_id) if user_id else None
     
-    GET: Display user creation form
-    POST: Process user creation form submission
-    """
     if request.method == 'POST':
         # Get form data
         username = request.form.get('username')
@@ -204,127 +194,100 @@ def create_user():
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         password = request.form.get('password')
-        role_names = request.form.getlist('roles[]')
-        
-        # Validate form data
-        if not username or not email or not password or not role_names:
-            flash('All required fields must be filled.', 'danger')
-            return redirect(url_for('admin.create_user'))
-        
-        # Check if username or email already exists
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists.', 'danger')
-            return redirect(url_for('admin.create_user'))
-        
-        if User.query.filter_by(email=email).first():
-            flash('Email already exists.', 'danger')
-            return redirect(url_for('admin.create_user'))
-        
-        # Create new user
-        new_user = User(
-            username=username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            password_hash=generate_password_hash(password),
-            is_active=True
-        )
-        
-        # Add roles to the user
-        for role_name in role_names:
-            role = Role.query.filter_by(name=role_name).first()
-            if role:
-                new_user.roles.append(role)
-        
-        # Add user to database
-        db.session.add(new_user)
-        db.session.commit()
-        
-        flash('User created successfully.', 'success')
-        return redirect(url_for('admin.users'))
-    
-    # Get all available roles for the form
-    roles = Role.query.all()
-    return render_template('admin/create_user.html', roles=roles)
-
-@admin_bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_user(user_id):
-    """
-    Handle user editing.
-    
-    GET: Display user edit form
-    POST: Process user edit form submission
-    """
-    user = User.query.get_or_404(user_id)
-    
-    if request.method == 'POST':
-        # Get form data
-        username = request.form.get('username')
-        email = request.form.get('email')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
         role_names = request.form.getlist('roles[]')
         is_active = True if request.form.get('is_active') else False
         
         # Validate form data
         if not username or not email or not role_names:
             flash('All required fields must be filled.', 'danger')
-            return redirect(url_for('admin.edit_user', user_id=user_id))
+            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
         
-        # Check if username already exists (excluding current user)
+        # Check if username exists (excluding current user if editing)
         existing_user = User.query.filter_by(username=username).first()
-        if existing_user and existing_user.id != user_id:
+        if existing_user and (not user or existing_user.id != user.id):
             flash('Username already exists.', 'danger')
-            return redirect(url_for('admin.edit_user', user_id=user_id))
+            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
         
-        # Check if email already exists (excluding current user)
+        # Check if email exists (excluding current user if editing)
         existing_user = User.query.filter_by(email=email).first()
-        if existing_user and existing_user.id != user_id:
+        if existing_user and (not user or existing_user.id != user.id):
             flash('Email already exists.', 'danger')
-            return redirect(url_for('admin.edit_user', user_id=user_id))
+            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
         
-        # Update user
-        user.username = username
-        user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
-        user.is_active = is_active
+        if user:
+            # Update existing user
+            user.username = username
+            user.email = email
+            user.first_name = first_name
+            user.last_name = last_name
+            user.is_active = is_active
+            
+            # Check if user is losing Consultant role
+            consultant_role = Role.query.filter_by(name='Consultant').first()
+            had_consultant_role = consultant_role in user.roles
+            will_have_consultant_role = 'Consultant' in role_names
+            
+            # Update roles
+            user.roles = []
+            for role_name in role_names:
+                role = Role.query.filter_by(name=role_name).first()
+                if role:
+                    user.roles.append(role)
+            
+            # If user lost Consultant role, remove their consultant entry
+            if had_consultant_role and not will_have_consultant_role:
+                consultant = Consultant.query.filter_by(user_id=user.id).first()
+                if consultant:
+                    db.session.delete(consultant)
+        else:
+            # Create new user
+            if not password:
+                flash('Password is required for new users.', 'danger')
+                return redirect(url_for('admin.manage_user'))
+            
+            user = User(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                password_hash=generate_password_hash(password),
+                is_active=True
+            )
+            
+            # Add roles to the user
+            for role_name in role_names:
+                role = Role.query.filter_by(name=role_name).first()
+                if role:
+                    user.roles.append(role)
+            
+            db.session.add(user)
         
-        # Update roles
-        user.roles = []  # Clear existing roles
-        for role_name in role_names:
-            role = Role.query.filter_by(name=role_name).first()
-            if role:
-                user.roles.append(role)
-        
-        # Update password if provided
-        password = request.form.get('password')
-        if password:
-            user.password_hash = generate_password_hash(password)
-        
-        db.session.commit()
-        
-        flash('User updated successfully.', 'success')
-        return redirect(url_for('admin.users'))
+        try:
+            db.session.commit()
+            flash(f'User {"updated" if user_id else "created"} successfully.', 'success')
+            return redirect(url_for('admin.users'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error {"updating" if user_id else "creating"} user: {str(e)}', 'danger')
+            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
     
     # Get all available roles for the form
     roles = Role.query.all()
-    return render_template('admin/edit_user.html', user=user, roles=roles)
+    return render_template('admin/user_form.html', user=user, roles=roles)
 
 @admin_bp.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    """Handle user deletion."""
-    user = User.query.get_or_404(user_id)
-    
-    # Prevent deleting yourself
-    if user.id == current_user.id:
+    """
+    Handle user deletion.
+    """
+    # Prevent deleting self
+    if user_id == current_user.id:
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('admin.users'))
     
+    user = User.query.get_or_404(user_id)
     db.session.delete(user)
     db.session.commit()
     
@@ -336,41 +299,15 @@ def delete_user(user_id):
 @admin_required
 def import_data():
     """
-    Handle data import from JSON file.
+    Import data from CSV files.
     
     GET: Display import form
-    POST: Process JSON file upload
+    POST: Process import form submission
     """
     if request.method == 'POST':
-        # Check if file was uploaded
-        if 'json_file' not in request.files:
-            flash('No file selected.', 'danger')
-            return redirect(url_for('admin.import_data'))
-        
-        file = request.files['json_file']
-        
-        # Check if file is empty
-        if file.filename == '':
-            flash('No file selected.', 'danger')
-            return redirect(url_for('admin.import_data'))
-        
-        # Check if file is JSON
-        if not file.filename.endswith('.json'):
-            flash('File must be a JSON file.', 'danger')
-            return redirect(url_for('admin.import_data'))
-        
-        try:
-            # Parse JSON file
-            data = json.load(file)
-            
-            # TODO: Process JSON data and import into database
-            # This is a placeholder for the actual import logic
-            
-            flash('Data imported successfully.', 'success')
-            return redirect(url_for('admin.dashboard'))
-        except Exception as e:
-            flash(f'Error importing data: {str(e)}', 'danger')
-            return redirect(url_for('admin.import_data'))
+        # TODO: Implement data import functionality
+        flash('Data import functionality is not yet implemented.', 'info')
+        return redirect(url_for('admin.dashboard'))
     
     return render_template('admin/import_data.html')
 
@@ -413,248 +350,129 @@ def settings_json(setting_type):
     # Handle POST request
     if request.method == 'POST':
         try:
-            # Get updated settings from request
-            updated_settings = request.json
+            # Get JSON data from request
+            data = request.get_json()
             
             # Update settings
-            settings[setting_type] = updated_settings
+            settings[setting_type] = data
             
             # Save settings
             if save_settings(settings):
-                return jsonify({"success": True, "message": f"{setting_type} settings updated successfully"})
+                return jsonify({"success": True})
             else:
                 return jsonify({"success": False, "message": "Failed to save settings"}), 500
         except Exception as e:
             return jsonify({"success": False, "message": str(e)}), 500
 
-@admin_bp.route('/lists')
+@admin_bp.route('/settings/json/export', methods=['GET'])
 @login_required
 @admin_required
-def lists():
+def export_settings_json():
     """
-    Display and manage lists for dropdown values.
+    Export all settings as a JSON file.
     """
-    # Get all lists
-    all_lists = List.query.all()
+    # Load settings
+    settings = load_settings()
     
-    return render_template('admin/lists.html', lists=all_lists)
+    # Create response with JSON data
+    response = jsonify(settings)
+    response.headers['Content-Disposition'] = 'attachment; filename=settings.json'
+    return response
 
-@admin_bp.route('/lists/create', methods=['GET', 'POST'])
+@admin_bp.route('/lists/api/create', methods=['POST'])
 @login_required
 @admin_required
-def create_list():
+def api_create_list():
     """
-    Handle list creation.
-    
-    GET: Display list creation form
-    POST: Process list creation form submission
+    API endpoint for creating a new list.
     """
-    if request.method == 'POST':
-        # Get form data
-        name = request.form.get('name')
-        description = request.form.get('description')
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        name = data.get('name')
+        description = data.get('description', '')
         
-        # Validate form data
+        # Validate data
         if not name:
-            flash('List name is required.', 'danger')
-            return redirect(url_for('admin.create_list'))
+            return jsonify({"success": False, "message": "List name is required"}), 400
         
         # Check if list already exists
         if List.query.filter_by(name=name).first():
-            flash('A list with this name already exists.', 'danger')
-            return redirect(url_for('admin.create_list'))
+            return jsonify({"success": False, "message": "A list with this name already exists"}), 400
         
         # Create new list
-        new_list = List(
-            name=name,
-            description=description
-        )
-        
-        # Add list to database
+        new_list = List(name=name, description=description)
         db.session.add(new_list)
         db.session.commit()
         
-        flash('List created successfully.', 'success')
-        return redirect(url_for('admin.lists'))
-    
-    return render_template('admin/lists/create.html')
+        return jsonify({"success": True, "list_id": new_list.id})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
-@admin_bp.route('/lists/<int:list_id>/items', methods=['GET'])
+@admin_bp.route('/lists/api/<int:list_id>/items', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def list_items(list_id):
+def api_list_items(list_id):
     """
-    Display items for a specific list.
+    API endpoint for managing list items.
+    GET: Return items for a specific list
+    POST: Update items for a specific list
     """
     # Get list
     list_obj = List.query.get_or_404(list_id)
     
-    # Get items
-    items = ListItem.query.filter_by(list_id=list_id).order_by(ListItem.order).all()
-    
-    return render_template('admin/lists/items.html', list=list_obj, items=items)
-
-@admin_bp.route('/lists/<int:list_id>/items/create', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def create_list_item(list_id):
-    """
-    Handle list item creation.
-    
-    GET: Display list item creation form
-    POST: Process list item creation form submission
-    """
-    # Get list
-    list_obj = List.query.get_or_404(list_id)
-    
-    if request.method == 'POST':
-        # Get form data
-        value = request.form.get('value')
-        description = request.form.get('description')
-        order = request.form.get('order')
-        
-        # Validate form data
-        if not value:
-            flash('Item value is required.', 'danger')
-            return redirect(url_for('admin.create_list_item', list_id=list_id))
-        
-        # Create new list item
-        new_item = ListItem(
-            list_id=list_id,
-            value=value,
-            description=description,
-            order=int(order) if order else None
-        )
-        
-        # Add item to database
-        db.session.add(new_item)
-        db.session.commit()
-        
-        flash('List item created successfully.', 'success')
-        return redirect(url_for('admin.list_items', list_id=list_id))
-    
-    return render_template('admin/lists/create_item.html', list=list_obj)
-
-@admin_bp.route('/lists/manage/<int:list_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def manage_list(list_id=None):
-    """
-    Simplified list management - create, edit, and manage items all in one view.
-    
-    GET: Display list management form
-    POST: Process list management form submission
-    """
-    # Get list if it exists
-    list_obj = None
-    items = []
-    
-    if list_id:
-        list_obj = List.query.get_or_404(list_id)
+    # Handle GET request
+    if request.method == 'GET':
         items = ListItem.query.filter_by(list_id=list_id).order_by(ListItem.order).all()
+        items_data = [{"id": item.id, "value": item.value, "description": item.description, "order": item.order} for item in items]
+        return jsonify({"success": True, "items": items_data})
     
+    # Handle POST request
     if request.method == 'POST':
-        # Get form data
-        list_name = request.form.get('list_name')
-        list_description = request.form.get('list_description')
-        
-        # Validate form data
-        if not list_name:
-            flash('List name is required.', 'danger')
-            return redirect(url_for('admin.manage_list', list_id=list_id))
-        
-        # Create or update list
-        if list_obj:
-            # Update existing list
-            list_obj.name = list_name
-            list_obj.description = list_description
-        else:
-            # Create new list
-            list_obj = List(
-                name=list_name,
-                description=list_description
-            )
-            db.session.add(list_obj)
-            db.session.commit()
-            list_id = list_obj.id
-        
-        # Process items
-        # First, get all existing items to track which ones to delete
-        existing_items = {item.id: item for item in ListItem.query.filter_by(list_id=list_id).all()}
-        processed_item_ids = set()
-        
-        # Get all item data from form
-        item_values = request.form.getlist('item_value[]')
-        item_descriptions = request.form.getlist('item_description[]')
-        item_orders = request.form.getlist('item_order[]')
-        item_ids = request.form.getlist('item_id[]')
-        
-        # Process each item
-        for i in range(len(item_values)):
-            value = item_values[i].strip()
-            if not value:  # Skip empty values
-                continue
-                
-            description = item_descriptions[i] if i < len(item_descriptions) else ''
-            order = int(item_orders[i]) if i < len(item_orders) and item_orders[i].isdigit() else i+1
-            item_id = int(item_ids[i]) if i < len(item_ids) and item_ids[i].isdigit() else None
+        try:
+            # Get JSON data from request
+            data = request.get_json()
+            items = data.get('items', [])
             
-            if item_id and item_id in existing_items:
-                # Update existing item
-                item = existing_items[item_id]
-                item.value = value
-                item.description = description
-                item.order = order
-                processed_item_ids.add(item_id)
-            else:
-                # Create new item
+            # Delete existing items
+            ListItem.query.filter_by(list_id=list_id).delete()
+            
+            # Add new items
+            for item in items:
                 new_item = ListItem(
                     list_id=list_id,
-                    value=value,
-                    description=description,
-                    order=order
+                    value=item['value'],
+                    description=item.get('description', ''),
+                    order=item.get('order', 0)
                 )
                 db.session.add(new_item)
+            
+            db.session.commit()
+            
+            return jsonify({"success": True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+
+@admin_bp.route('/lists/api/<int:list_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def api_delete_list(list_id):
+    """
+    API endpoint for deleting a list.
+    """
+    try:
+        # Get list
+        list_obj = List.query.get_or_404(list_id)
         
-        # Delete items that weren't in the form
-        for item_id, item in existing_items.items():
-            if item_id not in processed_item_ids:
-                db.session.delete(item)
-        
-        # Save all changes
+        # Delete list (cascade will delete items)
+        db.session.delete(list_obj)
         db.session.commit()
         
-        flash('List and items saved successfully.', 'success')
-        return redirect(url_for('admin.lists'))
-    
-    # For GET request or if form validation fails
-    return render_template('admin/lists/manage.html', 
-                          list=list_obj, 
-                          items=items)
-
-@admin_bp.route('/lists/manage', methods=['GET'])
-@login_required
-@admin_required
-def manage_new_list():
-    """
-    Create a new list using the management interface.
-    """
-    return render_template('admin/lists/manage.html', 
-                          list=None, 
-                          items=[])
-
-@admin_bp.route('/lists/delete/<int:list_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_list(list_id):
-    """
-    Handle list deletion.
-    """
-    list_obj = List.query.get_or_404(list_id)
-    db.session.delete(list_obj)
-    db.session.commit()
-    flash('List deleted successfully.', 'success')
-    return redirect(url_for('admin.lists'))
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # TODO: Add routes for reports and analytics
 # TODO: Add routes for system settings

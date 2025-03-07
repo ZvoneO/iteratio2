@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ consultant.full_name }} - Resource Planning Application{% endblock %}
+{% block title %}{{ consultant.user.first_name }} {{ consultant.user.last_name }} - Resource Planning Application{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col">
         <h1 class="h2">
-            <i class="fas fa-user-tie"></i> {{ consultant.full_name }}
+            <i class="fas fa-user-tie"></i> {{ consultant.user.first_name }} {{ consultant.user.last_name }}
         </h1>
         <p class="lead">Consultant Details</p>
     </div>
@@ -33,7 +33,7 @@
                     <div class="col-md-6">
                         <dl class="row">
                             <dt class="col-sm-4">Name:</dt>
-                            <dd class="col-sm-8">{{ consultant.name }} {{ consultant.surname }}</dd>
+                            <dd class="col-sm-8">{{ consultant.user.first_name }} {{ consultant.user.last_name }}</dd>
                             
                             <dt class="col-sm-4">Status:</dt>
                             <dd class="col-sm-8">
@@ -50,15 +50,15 @@
                             
                             <dt class="col-sm-4">User Account:</dt>
                             <dd class="col-sm-8">
-                                <a href="{{ url_for('admin.edit_user', user_id=consultant.user_id) }}">
+                                <a href="{{ url_for('admin.manage_user', user_id=consultant.user_id) }}">
                                     {{ consultant.user.username }}
                                 </a>
                             </dd>
                             
                             <dt class="col-sm-4">Email:</dt>
                             <dd class="col-sm-8">
-                                {% if consultant.email %}
-                                <a href="mailto:{{ consultant.email }}">{{ consultant.email }}</a>
+                                {% if consultant.user.email %}
+                                <a href="mailto:{{ consultant.user.email }}">{{ consultant.user.email }}</a>
                                 {% else %}
                                 <span class="text-muted">Not set</span>
                                 {% endif %}
@@ -66,8 +66,8 @@
                             
                             <dt class="col-sm-4">Phone:</dt>
                             <dd class="col-sm-8">
-                                {% if consultant.phone_number %}
-                                <a href="tel:{{ consultant.phone_number }}">{{ consultant.phone_number }}</a>
+                                {% if consultant.user.phone_number %}
+                                <a href="tel:{{ consultant.user.phone_number }}">{{ consultant.user.phone_number }}</a>
                                 {% else %}
                                 <span class="text-muted">Not set</span>
                                 {% endif %}

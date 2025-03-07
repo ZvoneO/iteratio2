@@ -29,10 +29,16 @@
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="user_id" class="form-label">User Account <span class="text-danger">*</span></label>
-                                <select class="form-control" id="user_id" name="user_id" required>
+                                <select class="form-control" id="user_id" name="user_id" required onchange="populateUserData()">
                                     <option value="">Select a user</option>
                                     {% for user in users %}
-                                    <option value="{{ user.id }}" {% if user.id == consultant.user_id %}selected{% endif %}>{{ user.username }} ({{ user.email }})</option>
+                                    <option value="{{ user.id }}" 
+                                            {% if user.id == consultant.user_id %}selected{% endif %}
+                                            data-first-name="{{ user.first_name or '' }}"
+                                            data-last-name="{{ user.last_name or '' }}"
+                                            data-email="{{ user.email }}">
+                                        {{ user.username }} ({{ user.email }})
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -42,14 +48,14 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="name" class="form-label">First Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" value="{{ consultant.name }}" required>
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" value="{{ consultant.user.first_name }}" readonly>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="surname" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="surname" name="surname" value="{{ consultant.surname }}" required>
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" value="{{ consultant.user.last_name }}" readonly>
                             </div>
                         </div>
                     </div>
@@ -93,13 +99,7 @@
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email" value="{{ consultant.email }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="phone_number" class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ consultant.phone_number }}">
+                                <input type="email" class="form-control" id="email" value="{{ consultant.user.email }}" readonly>
                             </div>
                         </div>
                     </div>
@@ -199,4 +199,24 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+function populateUserData() {
+    const userSelect = document.getElementById('user_id');
+    const selectedOption = userSelect.options[userSelect.selectedIndex];
+    
+    // Get user data from data attributes
+    const firstName = selectedOption.getAttribute('data-first-name');
+    const lastName = selectedOption.getAttribute('data-last-name');
+    const email = selectedOption.getAttribute('data-email');
+    
+    // Update form fields
+    document.getElementById('first_name').value = firstName;
+    document.getElementById('last_name').value = lastName;
+    document.getElementById('email').value = email;
+}
+</script>
+{% endblock %}
+
 {% endblock %} 

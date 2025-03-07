@@ -24,7 +24,7 @@
             <div class="card-body text-center">
                 <h1 class="display-4">{{ project_count }}</h1>
                 <p class="card-text">
-                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
                         Total Projects
                     {% else %}
                         Assigned Projects
@@ -48,7 +48,7 @@
             <div class="card-body text-center">
                 <h1 class="display-4">{{ client_count }}</h1>
                 <p class="card-text">
-                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
                         Total Clients
                     {% else %}
                         Associated Clients
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Users/Consultants Card -->
-    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
     <div class="col-md-6 col-lg-3 mb-4">
         <div class="card border-info h-100">
             <div class="card-header bg-info text-white">
@@ -92,7 +92,7 @@
             <div class="card-body text-center">
                 <h1 class="display-4">{{ consultant_count }}</h1>
                 <p class="card-text">
-                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
                         Total Consultants
                     {% else %}
                         Team Members
@@ -117,7 +117,8 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    {% if 'Admin' in current_user.roles|map(attribute='name') or 'Manager' in current_user.roles|map(attribute='name') %}
+                    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
+                    <!-- First row of actions -->
                     <div class="col-md-3 mb-3">
                         <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-plus"></i> New Project
@@ -129,16 +130,38 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="{{ url_for('admin.create_user') }}" class="btn btn-outline-info w-100">
-                            <i class="fas fa-user-plus"></i> New User
+                        <a href="{{ url_for('admin.manage_user') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-user-plus"></i> Add New User
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="{{ url_for('admin.lists') }}" class="btn btn-outline-secondary w-100">
-                            <i class="fas fa-list"></i> Manage Lists
+                        <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-cog"></i> Settings
                         </a>
                     </div>
-                    {% elif 'Project Manager' in current_user.roles|map(attribute='name') %}
+                    
+                    <!-- Second row of actions -->
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('projects.list_templates') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-clipboard-list"></i> Project Templates
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('catalog.list_groups') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-layer-group"></i> Product Groups
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('catalog.list_products') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-box"></i> Products & Services
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-user-tie"></i> Consultants
+                        </a>
+                    </div>
+                    {% elif 'Project Manager' in user_roles %}
                     <div class="col-md-4 mb-3">
                         <a href="{{ url_for('projects.create_project') }}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-plus"></i> New Project

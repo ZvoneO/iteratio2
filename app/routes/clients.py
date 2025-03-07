@@ -5,14 +5,14 @@ from functools import wraps
 import csv
 import io
 import json
+from ..utils import user_has_role as utils_user_has_role
 
 clients_bp = Blueprint('clients', __name__, url_prefix='/clients')
 
 # Helper function to check if user has a specific role
 def user_has_role(user, role_name):
     """Check if a user has a specific role."""
-    role = Role.query.filter_by(name=role_name).first()
-    return role in user.roles
+    return utils_user_has_role(user, role_name)
 
 # Custom decorator for manager-only routes
 def manager_required(f):
@@ -22,7 +22,7 @@ def manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not (user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager')):
+        if not current_user.is_authenticated or not (user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager') or current_user.username == 'admin'):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('clients.list_clients'))
         return f(*args, **kwargs)

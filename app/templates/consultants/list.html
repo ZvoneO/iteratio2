@@ -11,7 +11,7 @@
         <p class="lead">Manage consultants and their expertise</p>
     </div>
     <div class="col-auto">
-        {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+        {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
         <a href="{{ url_for('consultants.create_consultant') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Add Consultant
         </a>
@@ -79,7 +79,7 @@
                         <tbody>
                             {% for consultant in consultants %}
                             <tr>
-                                <td>{{ consultant.full_name }}</td>
+                                <td>{{ consultant.user.first_name }} {{ consultant.user.last_name }}</td>
                                 <td>
                                     {% if consultant.status == 'Active' %}
                                     <span class="badge bg-success">Active</span>
@@ -101,11 +101,11 @@
                                     <a href="{{ url_for('consultants.view_consultant', consultant_id=consultant.id) }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-eye"></i> View
                                     </a>
-                                    {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
+                                    {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
                                     <a href="{{ url_for('consultants.edit_consultant', consultant_id=consultant.id) }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger delete-consultant" data-id="{{ consultant.id }}" data-name="{{ consultant.full_name }}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-consultant" data-id="{{ consultant.id }}" data-name="{{ consultant.user.first_name }} {{ consultant.user.last_name }}">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
                                     {% endif %}

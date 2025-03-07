@@ -57,8 +57,11 @@
             <!-- JSON Settings Tab -->
             <div class="tab-pane fade show active" id="json-settings">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">JSON Settings</h5>
+                        <button class="btn btn-sm btn-light" id="export-json-settings">
+                            <i class="fas fa-file-export"></i> Export JSON
+                        </button>
                     </div>
                     <div class="card-body">
                         <p>These settings are stored in a JSON file and can be edited directly.</p>
@@ -155,9 +158,9 @@
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Database Lists</h5>
-                        <a href="{{ url_for('admin.create_list') }}" class="btn btn-sm btn-light">
+                        <button class="btn btn-sm btn-light" id="create-new-list">
                             <i class="fas fa-plus"></i> Create New List
-                        </a>
+                        </button>
                     </div>
                     <div class="card-body">
                         <p>These lists are stored in the database and can be used throughout the application.</p>
@@ -180,9 +183,12 @@
                                         <td>{{ list.description }}</td>
                                         <td>{{ list.items|length }}</td>
                                         <td>
-                                            <a href="{{ url_for('admin.list_items', list_id=list.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <button class="btn btn-sm btn-outline-primary view-list-items" data-list-id="{{ list.id }}" data-list-name="{{ list.name }}">
                                                 <i class="fas fa-list"></i> View Items
-                                            </a>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-list" data-list-id="{{ list.id }}" data-list-name="{{ list.name }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -236,6 +242,90 @@
         </div>
     </div>
 </div>
+
+<!-- Create List Modal -->
+<div class="modal fade" id="createListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New List</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-list-form">
+                    <div class="mb-3">
+                        <label for="list-name" class="form-label">List Name</label>
+                        <input type="text" class="form-control" id="list-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="list-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="list-description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-new-list">Create List</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- List Items Modal -->
+<div class="modal fade" id="listItemsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="listItemsModalLabel">List Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="list-items-table">
+                        <thead>
+                            <tr>
+                                <th width="5%"></th>
+                                <th width="40%">Value</th>
+                                <th width="45%">Description</th>
+                                <th width="10%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-items-body">
+                            <!-- Will be populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-success mt-2" id="add-list-item">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="save-list-items">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete List Confirmation Modal -->
+<div class="modal fade" id="deleteListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the list "<span id="delete-list-name"></span>"?</p>
+                <p class="text-danger">This action cannot be undone and will remove all items in this list.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-list">Delete List</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -245,6 +335,7 @@
         // Current settings being edited
         let currentSettingType = '';
         let currentSettings = [];
+        let currentListId = null;
         
         // Edit buttons click handlers
         document.getElementById('edit-project-statuses').addEventListener('click', function() {
@@ -259,6 +350,40 @@
             openSettingsEditor('priority_levels', 'Priority Levels');
         });
         
+        // Export JSON button
+        document.getElementById('export-json-settings').addEventListener('click', function() {
+            exportJsonSettings();
+        });
+        
+        // Create new list button
+        document.getElementById('create-new-list').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('createListModal'));
+            modal.show();
+        });
+        
+        // Save new list button
+        document.getElementById('save-new-list').addEventListener('click', function() {
+            saveNewList();
+        });
+        
+        // View list items buttons
+        document.querySelectorAll('.view-list-items').forEach(button => {
+            button.addEventListener('click', function() {
+                const listId = this.getAttribute('data-list-id');
+                const listName = this.getAttribute('data-list-name');
+                openListItems(listId, listName);
+            });
+        });
+        
+        // Delete list buttons
+        document.querySelectorAll('.delete-list').forEach(button => {
+            button.addEventListener('click', function() {
+                const listId = this.getAttribute('data-list-id');
+                const listName = this.getAttribute('data-list-name');
+                confirmDeleteList(listId, listName);
+            });
+        });
+        
         // Add new row button
         document.getElementById('add-setting-row').addEventListener('click', function() {
             addSettingRow('', '');
@@ -266,6 +391,17 @@
         
         // Save settings button
         document.getElementById('save-settings').addEventListener('click', saveSettings);
+        
+        // Add list item button
+        document.getElementById('add-list-item').addEventListener('click', function() {
+            addListItemRow('', '', '');
+        });
+        
+        // Save list items button
+        document.getElementById('save-list-items').addEventListener('click', saveListItems);
+        
+        // Confirm delete list button
+        document.getElementById('confirm-delete-list').addEventListener('click', deleteList);
         
         // Function to open settings editor
         function openSettingsEditor(settingType, title) {
@@ -377,6 +513,212 @@
             .catch(error => {
                 console.error('Error saving settings:', error);
                 alert('Failed to save settings. Please try again.');
+            });
+        }
+        
+        // Function to export JSON settings
+        function exportJsonSettings() {
+            fetch('/admin/settings/json/export')
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'settings.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error exporting settings:', error);
+                    alert('Failed to export settings. Please try again.');
+                });
+        }
+        
+        // Function to save new list
+        function saveNewList() {
+            const name = document.getElementById('list-name').value.trim();
+            const description = document.getElementById('list-description').value.trim();
+            
+            if (!name) {
+                alert('List name is required.');
+                return;
+            }
+            
+            // Send data to server
+            fetch('/admin/lists/api/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('createListModal')).hide();
+                    
+                    // Reload page to show new list
+                    window.location.reload();
+                } else {
+                    alert('Failed to create list: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating list:', error);
+                alert('Failed to create list. Please try again.');
+            });
+        }
+        
+        // Function to open list items
+        function openListItems(listId, listName) {
+            currentListId = listId;
+            
+            // Update modal title
+            document.getElementById('listItemsModalLabel').textContent = 'Items for ' + listName;
+            
+            // Clear existing rows
+            const tbody = document.getElementById('list-items-body');
+            tbody.innerHTML = '';
+            
+            // Fetch list items
+            fetch(`/admin/lists/api/${listId}/items`)
+                .then(response => response.json())
+                .then(data => {
+                    // Add rows for each item
+                    data.items.forEach(item => {
+                        addListItemRow(item.id, item.value, item.description);
+                    });
+                    
+                    // Initialize sortable
+                    new Sortable(tbody, {
+                        handle: '.drag-handle',
+                        animation: 150
+                    });
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('listItemsModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching list items:', error);
+                    alert('Failed to load list items. Please try again.');
+                });
+        }
+        
+        // Function to add a list item row
+        function addListItemRow(id, value, description) {
+            const tbody = document.getElementById('list-items-body');
+            const row = document.createElement('tr');
+            row.className = 'item-row';
+            
+            row.innerHTML = `
+                <td>
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                </td>
+                <td>
+                    <input type="text" class="form-control item-value" value="${value}" placeholder="Value">
+                    <input type="hidden" class="item-id" value="${id}">
+                </td>
+                <td>
+                    <input type="text" class="form-control item-description" value="${description}" placeholder="Description">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-danger delete-row">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+            
+            // Add delete button handler
+            row.querySelector('.delete-row').addEventListener('click', function() {
+                row.remove();
+            });
+        }
+        
+        // Function to save list items
+        function saveListItems() {
+            const rows = document.querySelectorAll('#list-items-body tr');
+            const items = [];
+            
+            // Collect data from rows
+            rows.forEach((row, index) => {
+                const id = row.querySelector('.item-id').value;
+                const value = row.querySelector('.item-value').value.trim();
+                const description = row.querySelector('.item-description').value.trim();
+                
+                if (value) {
+                    items.push({
+                        id: id || null,
+                        value: value,
+                        description: description,
+                        order: index + 1
+                    });
+                }
+            });
+            
+            // Send updated items to server
+            fetch(`/admin/lists/api/${currentListId}/items`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ items: items })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('listItemsModal')).hide();
+                    
+                    // Reload page to show updated items
+                    window.location.reload();
+                } else {
+                    alert('Failed to save list items: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving list items:', error);
+                alert('Failed to save list items. Please try again.');
+            });
+        }
+        
+        // Function to confirm list deletion
+        function confirmDeleteList(listId, listName) {
+            currentListId = listId;
+            document.getElementById('delete-list-name').textContent = listName;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deleteListModal'));
+            modal.show();
+        }
+        
+        // Function to delete list
+        function deleteList() {
+            fetch(`/admin/lists/api/${currentListId}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('deleteListModal')).hide();
+                    
+                    // Reload page to show updated lists
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete list: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting list:', error);
+                alert('Failed to delete list. Please try again.');
             });
         }
     });

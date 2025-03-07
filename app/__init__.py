@@ -25,7 +25,14 @@ def create_app(config_class=None):
     else:
         # Default configuration
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-development-only')
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+        
+        # Use Flask's instance_path to correctly reference the instance directory
+        db_path = os.path.join(app.instance_path, 'app.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
+        
+        # Ensure the instance directory exists
+        os.makedirs(app.instance_path, exist_ok=True)
+        
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions

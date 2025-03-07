@@ -1,0 +1,60 @@
+{
+    "project_statuses": [
+        {
+            "value": "Preparation",
+            "description": "Project is being prepared before initiation."
+        },
+        {
+            "value": "Initiation",
+            "description": "Project is being officially started and defined"
+        },
+        {
+            "value": "Planning",
+            "description": "Project is in the planning phase, defining scope, timeline, and resources."
+        },
+        {
+            "value": "Implementation",
+            "description": "Project is being executed and actively worked on."
+        },
+        {
+            "value": "Closure",
+            "description": "Project is being finalized and completed."
+        },
+        {
+            "value": "Paid",
+            "description": "Project has been completed and payment has been processed."
+        },
+        {
+            "value": "One-Time",
+            "description": "Project is a single-instance task or engagement."
+        }
+    ],
+    "consultant_statuses": [
+        {
+            "value": "Active",
+            "description": "Consultant is currently active"
+        },
+        {
+            "value": "Inactive",
+            "description": "Consultant is not currently active"
+        }
+    ],
+    "priority_levels": [
+        {
+            "value": "Low",
+            "description": "Low priority"
+        },
+        {
+            "value": "Medium",
+            "description": "Medium priority"
+        },
+        {
+            "value": "High",
+            "description": "High priority"
+        },
+        {
+            "value": "Critical",
+            "description": "Critical priority"
+        }
+    ]
+}

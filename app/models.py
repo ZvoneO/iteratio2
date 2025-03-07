@@ -33,17 +33,12 @@ class User(db.Model, UserMixin):
 class Consultant(db.Model):
     """
     Consultant model for resource management.
-    Stores consultant details and availability information.
+    Stores consultant-specific information not available in the User model.
     """
     __tablename__ = 'consultants'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    name = db.Column(db.String(50), nullable=False)
-    surname = db.Column(db.String(50), nullable=False)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120))
-    phone_number = db.Column(db.String(20))
     availability_days_per_month = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='Active')  # Active, Inactive, On Leave
     start_date = db.Column(db.Date)
@@ -57,7 +52,19 @@ class Consultant(db.Model):
     expertise = db.relationship('ConsultantExpertise', backref='consultant', lazy=True, cascade="all, delete-orphan")
     
     def __repr__(self):
-        return f'<Consultant {self.full_name}>'
+        return f'<Consultant {self.user.first_name} {self.user.last_name}>'
+    
+    @property
+    def full_name(self):
+        """Get the consultant's full name from the associated user"""
+        if self.user:
+            return f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
+        return ""
+    
+    @property
+    def email(self):
+        """Get the consultant's email from the associated user"""
+        return self.user.email if self.user else None
 
 # Expertise categories for consultants
 class ExpertiseCategory(db.Model):

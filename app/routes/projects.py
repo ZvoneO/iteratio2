@@ -5,6 +5,8 @@ from functools import wraps
 import os
 import json
 from datetime import datetime
+from ..utils import user_has_role as utils_user_has_role
+from ..utils import user_has_any_role as utils_user_has_any_role
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -24,16 +26,12 @@ def load_settings():
 # Helper function to check if user has a specific role
 def user_has_role(user, role_name):
     """Check if a user has a specific role."""
-    role = Role.query.filter_by(name=role_name).first()
-    return role in user.roles
+    return utils_user_has_role(user, role_name)
 
 # Helper function to check if user has any of the specified roles
 def user_has_any_role(user, role_names):
     """Check if a user has any of the specified roles."""
-    for role_name in role_names:
-        if user_has_role(user, role_name):
-            return True
-    return False
+    return utils_user_has_any_role(user, role_names)
 
 # Custom decorator for manager-only routes
 def manager_required(f):
@@ -57,7 +55,7 @@ def project_manager_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not user_has_any_role(current_user, ['Admin', 'Manager', 'Project Manager']):
+        if not current_user.is_authenticated or not (user_has_any_role(current_user, ['Admin', 'Manager', 'Project Manager']) or current_user.username == 'admin'):
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('projects.list_projects'))
         return f(*args, **kwargs)
