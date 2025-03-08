@@ -5,9 +5,14 @@ from werkzeug.security import generate_password_hash
 from functools import wraps
 import json
 import os
-from ..utils import user_has_role, user_has_any_role, get_user_roles
+from ..utils import user_has_role, user_has_any_role, get_user_roles, setup_logger
+import logging
+import traceback
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+# Initialize logger
+logger = setup_logger('admin', level=logging.DEBUG)
 
 # Helper function to load settings
 def load_settings():
@@ -19,7 +24,7 @@ def load_settings():
                 return json.load(f)
         return {}
     except Exception as e:
-        print(f"Error loading settings: {e}")
+        logger.error(f"Error loading settings: {e}")
         return {}
 
 # Helper function to save settings
@@ -30,9 +35,10 @@ def save_settings(settings):
         os.makedirs(os.path.dirname(settings_file), exist_ok=True)
         with open(settings_file, 'w') as f:
             json.dump(settings, f, indent=4)
+        logger.info("Settings saved successfully")
         return True
     except Exception as e:
-        print(f"Error saving settings: {e}")
+        logger.error(f"Error saving settings: {e}")
         return False
 
 # Custom decorator for admin-only routes
@@ -187,91 +193,154 @@ def manage_user(user_id=None):
     """
     user = User.query.get_or_404(user_id) if user_id else None
     
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if request.method == 'POST':
-        # Get form data
-        username = request.form.get('username')
-        email = request.form.get('email')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        password = request.form.get('password')
-        role_names = request.form.getlist('roles[]')
-        is_active = True if request.form.get('is_active') else False
-        
-        # Validate form data
-        if not username or not email or not role_names:
-            flash('All required fields must be filled.', 'danger')
-            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
-        
-        # Check if username exists (excluding current user if editing)
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user and (not user or existing_user.id != user.id):
-            flash('Username already exists.', 'danger')
-            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
-        
-        # Check if email exists (excluding current user if editing)
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user and (not user or existing_user.id != user.id):
-            flash('Email already exists.', 'danger')
-            return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
-        
-        if user:
-            # Update existing user
-            user.username = username
-            user.email = email
-            user.first_name = first_name
-            user.last_name = last_name
-            user.is_active = is_active
-            
-            # Check if user is losing Consultant role
-            consultant_role = Role.query.filter_by(name='Consultant').first()
-            had_consultant_role = consultant_role in user.roles
-            will_have_consultant_role = 'Consultant' in role_names
-            
-            # Update roles
-            user.roles = []
-            for role_name in role_names:
-                role = Role.query.filter_by(name=role_name).first()
-                if role:
-                    user.roles.append(role)
-            
-            # If user lost Consultant role, remove their consultant entry
-            if had_consultant_role and not will_have_consultant_role:
-                consultant = Consultant.query.filter_by(user_id=user.id).first()
-                if consultant:
-                    db.session.delete(consultant)
-        else:
-            # Create new user
-            if not password:
-                flash('Password is required for new users.', 'danger')
-                return redirect(url_for('admin.manage_user'))
-            
-            user = User(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                password_hash=generate_password_hash(password),
-                is_active=True
-            )
-            
-            # Add roles to the user
-            for role_name in role_names:
-                role = Role.query.filter_by(name=role_name).first()
-                if role:
-                    user.roles.append(role)
-            
-            db.session.add(user)
-        
         try:
+            # Get form data - handle both form submissions and JSON data
+            if is_ajax:
+                data = request.json
+                username = data.get('username')
+                email = data.get('email')
+                first_name = data.get('first_name')
+                last_name = data.get('last_name')
+                password = data.get('password')
+                role_names = data.get('roles', [])
+                is_active = data.get('is_active', True)
+            else:
+                username = request.form.get('username')
+                email = request.form.get('email')
+                first_name = request.form.get('first_name')
+                last_name = request.form.get('last_name')
+                password = request.form.get('password')
+                role_names = request.form.getlist('roles[]')
+                is_active = True if request.form.get('is_active') else False
+            
+            # Log the request data (excluding password)
+            log_data = {
+                'username': username,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'role_names': role_names,
+                'is_active': is_active,
+                'user_id': user_id,
+                'is_ajax': is_ajax
+            }
+            logger.info(f"User update/create request: {log_data}")
+            
+            # Validate form data
+            if not username or not email or not role_names:
+                message = 'All required fields must be filled.'
+                logger.warning(f"Validation error: {message}")
+                if is_ajax:
+                    return jsonify({'success': False, 'message': message})
+                flash(message, 'danger')
+                return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
+            
+            # Check if username exists (excluding current user if editing)
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user and (not user or existing_user.id != user.id):
+                message = 'Username already exists.'
+                logger.warning(f"Validation error: {message} - {username}")
+                if is_ajax:
+                    return jsonify({'success': False, 'message': message})
+                flash(message, 'danger')
+                return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
+            
+            # Check if email exists (excluding current user if editing)
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user and (not user or existing_user.id != user.id):
+                message = 'Email already exists.'
+                logger.warning(f"Validation error: {message} - {email}")
+                if is_ajax:
+                    return jsonify({'success': False, 'message': message})
+                flash(message, 'danger')
+                return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
+            
+            if user:
+                # Update existing user
+                user.username = username
+                user.email = email
+                user.first_name = first_name
+                user.last_name = last_name
+                user.is_active = is_active
+                
+                # Update password if provided
+                if password and password.strip():
+                    user.password_hash = generate_password_hash(password)
+                
+                # Check if user is losing Consultant role
+                consultant_role = Role.query.filter_by(name='Consultant').first()
+                had_consultant_role = consultant_role in user.roles
+                will_have_consultant_role = 'Consultant' in role_names
+                
+                # Update roles
+                user.roles = []
+                for role_name in role_names:
+                    role = Role.query.filter_by(name=role_name).first()
+                    if role:
+                        user.roles.append(role)
+                
+                # If user lost Consultant role, remove their consultant entry
+                if had_consultant_role and not will_have_consultant_role:
+                    consultant = Consultant.query.filter_by(user_id=user.id).first()
+                    if consultant:
+                        db.session.delete(consultant)
+                        
+                logger.info(f"Updating existing user: {user.id} - {user.username}")
+            else:
+                # Create new user
+                if not password:
+                    message = 'Password is required for new users.'
+                    logger.warning(f"Validation error: {message}")
+                    if is_ajax:
+                        return jsonify({'success': False, 'message': message})
+                    flash(message, 'danger')
+                    return redirect(url_for('admin.manage_user'))
+                
+                user = User(
+                    username=username,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password_hash=generate_password_hash(password),
+                    is_active=True
+                )
+                
+                # Add roles to the user
+                for role_name in role_names:
+                    role = Role.query.filter_by(name=role_name).first()
+                    if role:
+                        user.roles.append(role)
+                
+                db.session.add(user)
+                logger.info(f"Creating new user: {username}")
+            
             db.session.commit()
-            flash(f'User {"updated" if user_id else "created"} successfully.', 'success')
+            
+            message = f'User {"updated" if user_id else "created"} successfully.'
+            logger.info(message)
+            if is_ajax:
+                return jsonify({'success': True, 'message': message, 'user_id': user.id})
+            
+            flash(message, 'success')
             return redirect(url_for('admin.users'))
+            
         except Exception as e:
             db.session.rollback()
-            flash(f'Error {"updating" if user_id else "creating"} user: {str(e)}', 'danger')
+            error_details = traceback.format_exc()
+            message = f'Error {"updating" if user_id else "creating"} user: {str(e)}'
+            logger.error(f"{message}\n{error_details}")
+            
+            if is_ajax:
+                return jsonify({'success': False, 'message': message, 'error_details': str(e)})
+            
+            flash(message, 'danger')
             return redirect(url_for('admin.manage_user', user_id=user_id) if user_id else url_for('admin.manage_user'))
     
-    # Get all available roles for the form
+    # GET request - render form
     roles = Role.query.all()
     return render_template('admin/user_form.html', user=user, roles=roles)
 
@@ -282,17 +351,45 @@ def delete_user(user_id):
     """
     Handle user deletion.
     """
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # Log the delete request
+    logger.info(f"Delete user request: user_id={user_id}, by={current_user.username}")
+    
     # Prevent deleting self
     if user_id == current_user.id:
-        flash('You cannot delete your own account.', 'danger')
+        message = 'You cannot delete your own account.'
+        logger.warning(f"Delete user validation error: {message}")
+        if is_ajax:
+            return jsonify({'success': False, 'message': message})
+        flash(message, 'danger')
         return redirect(url_for('admin.users'))
     
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    
-    flash('User deleted successfully.', 'success')
-    return redirect(url_for('admin.users'))
+    try:
+        user = User.query.get_or_404(user_id)
+        username = user.username  # Store for logging
+        db.session.delete(user)
+        db.session.commit()
+        
+        message = f'User {username} deleted successfully.'
+        logger.info(message)
+        if is_ajax:
+            return jsonify({'success': True, 'message': message})
+        
+        flash(message, 'success')
+        return redirect(url_for('admin.users'))
+    except Exception as e:
+        db.session.rollback()
+        error_details = traceback.format_exc()
+        message = f'Error deleting user: {str(e)}'
+        logger.error(f"{message}\n{error_details}")
+        
+        if is_ajax:
+            return jsonify({'success': False, 'message': message, 'error_details': str(e)})
+        
+        flash(message, 'danger')
+        return redirect(url_for('admin.users'))
 
 @admin_bp.route('/import-data', methods=['GET', 'POST'])
 @login_required

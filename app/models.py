@@ -47,6 +47,7 @@ class Consultant(db.Model):
     calendar_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    custom_data = db.Column(db.JSON, nullable=True)  # For flexible, evolving attributes
     
     # Relationships
     expertise = db.relationship('ConsultantExpertise', backref='consultant', lazy=True, cascade="all, delete-orphan")
@@ -258,6 +259,7 @@ class ProductGroup(db.Model):
     
     # Relationships
     products = db.relationship('ProductService', backref='group', lazy=True)
+    elements = db.relationship('ProductElement', backref='group', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<ProductGroup {self.name}>'
@@ -280,6 +282,24 @@ class ProductService(db.Model):
     
     def __repr__(self):
         return f'<ProductService {self.name}>'
+
+# Product Element model
+class ProductElement(db.Model):
+    """
+    Product Element model.
+    Stores label and activity pairs for product groups.
+    """
+    __tablename__ = 'product_elements'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(100), nullable=False)
+    activity = db.Column(db.String(255), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('product_groups.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ProductElement {self.label}>'
 
 # Association table for template-product relationship
 template_products = db.Table('template_products',

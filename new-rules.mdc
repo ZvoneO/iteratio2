@@ -1,1 +1,48 @@
- 
+# Database and Form Best Practices
+
+## Database Change Tolerance
+
+1. **Use getattr() for safe attribute access**
+   - Always use `getattr(object, 'attribute', default_value)` instead of direct attribute access
+   - This prevents crashes when database columns are missing or renamed
+
+2. **Use try/except blocks for database operations**
+   - Wrap all database queries in try/except blocks
+   - Log errors instead of letting the application crash
+   - Example:
+   ```python
+   try:
+       consultant = Consultant.query.get(consultant_id)
+       name = getattr(consultant, 'name', 'Unknown')
+   except Exception as e:
+       app.logger.error(f"Database error: {str(e)}")
+       name = "Unknown"
+   ```
+
+3. **Use JSON fields for optional/evolving data**
+   - Store non-critical and frequently changing fields in a JSON column
+   - This reduces the need for schema migrations
+
+4. **Always use proper data type conversion**
+   - Convert string inputs to appropriate Python types before storing in database
+   - Example: Convert date strings to Python date objects using `datetime.strptime()`
+
+## Form Standardization
+
+1. **Use a single form for both creation and editing**
+   - Create unified templates that handle both creating and editing
+   - Use conditional logic based on whether an object exists
+
+2. **Dynamic form behavior**
+   - If editing: Populate form with existing data
+   - If creating: Show empty form with appropriate defaults
+   - Use the same route function with optional parameters
+
+3. **Consistent error handling**
+   - Validate all form inputs before processing
+   - Provide clear error messages to users
+   - Return to the form with preserved input on validation failure
+
+4. **Proper transaction management**
+   - Use try/except/finally blocks with explicit commit/rollback
+   - Ensure database consistency even when errors occur 

@@ -10,62 +10,171 @@
         </h1>
         <p class="lead">Manage product groups for organizing products and services</p>
     </div>
-    <div class="col-auto">
-        <a href="{{ url_for('catalog.create_group') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Group
-        </a>
-    </div>
 </div>
 
 <div class="row">
     <div class="col-12">
-        <div class="card shadow">
+        <div class="card shadow mb-4">
             <div class="card-header bg-white">
                 <h5 class="mb-0">Product Groups</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if groups %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Products</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for group in groups %}
-                            <tr>
-                                <td>{{ group.name }}</td>
-                                <td>{{ group.description }}</td>
-                                <td>
-                                    {% set product_count = group.products|length %}
-                                    {% if product_count > 0 %}
-                                        {{ product_count }} product{% if product_count != 1 %}s{% endif %}
-                                    {% else %}
-                                        No products
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('catalog.edit_group', group_id=group.id) }}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger delete-group" data-id="{{ group.id }}" data-name="{{ group.name }}">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="list-group list-group-flush">
+                    {% for group in groups %}
+                    <div class="list-group-item p-0">
+                        <div class="d-flex justify-content-between align-items-center p-3">
+                            <div>
+                                <h5 class="mb-1">{{ group.name }}</h5>
+                                <p class="mb-1 text-muted small">{{ group.description }}</p>
+                                <span class="badge bg-secondary">{{ group.products|length }} product{% if group.products|length != 1 %}s{% endif %}</span>
+                                <span class="badge bg-info">{{ group.elements|length }} element{% if group.elements|length != 1 %}s{% endif %}</span>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary toggle-group-edit" data-group-id="{{ group.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-group" data-id="{{ group.id }}" data-name="{{ group.name }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Collapsible Edit Section -->
+                        <div class="collapse" id="group-edit-{{ group.id }}">
+                            <div class="p-3 border-top">
+                                <form method="POST" action="{{ url_for('catalog.manage_group', group_id=group.id) }}" class="group-edit-form">
+                                    <div class="mb-3">
+                                        <label for="name-{{ group.id }}" class="form-label">Group Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="name-{{ group.id }}" name="name" value="{{ group.name }}" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="description-{{ group.id }}" class="form-label">Description</label>
+                                        <textarea class="form-control" id="description-{{ group.id }}" name="description" rows="2">{{ group.description }}</textarea>
+                                    </div>
+                                    
+                                    <!-- Product Elements Section -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Product Elements</label>
+                                        <div class="elements-container" id="elements-container-{{ group.id }}">
+                                            {% if group.elements %}
+                                                {% for element in group.elements %}
+                                                <div class="row mb-2 element-row">
+                                                    <div class="col-5">
+                                                        <input type="text" class="form-control" name="element_label[]" placeholder="Label" value="{{ element.label }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <input type="text" class="form-control" name="element_activity[]" placeholder="Activity" value="{{ element.activity }}">
+                                                    </div>
+                                                    <div class="col-1">
+                                                        <button type="button" class="btn btn-outline-danger delete-element">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="row mb-2 element-row">
+                                                    <div class="col-5">
+                                                        <input type="text" class="form-control" name="element_label[]" placeholder="Label">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <input type="text" class="form-control" name="element_activity[]" placeholder="Activity">
+                                                    </div>
+                                                    <div class="col-1">
+                                                        <button type="button" class="btn btn-outline-danger delete-element">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <button type="button" class="btn btn-sm btn-outline-primary add-element-btn mt-2" data-container-id="elements-container-{{ group.id }}">
+                                            <i class="fas fa-plus"></i> Add Element
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <button type="button" class="btn btn-outline-secondary me-2 cancel-edit" data-group-id="{{ group.id }}">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" class="btn btn-primary update-group" data-group-id="{{ group.id }}">
+                                            Update Group
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
-                <div class="alert alert-info">
+                <div class="alert alert-info m-3">
                     <i class="fas fa-info-circle"></i> No product groups found.
                 </div>
                 {% endif %}
+            </div>
+        </div>
+        
+        <!-- Add New Group Button -->
+        <button type="button" class="btn btn-primary mb-4" id="add-group-btn">
+            <i class="fas fa-plus"></i> Add Group
+        </button>
+        
+        <!-- Add New Group Form (Collapsible) -->
+        <div class="collapse" id="add-group-form">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Add New Product Group</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('catalog.manage_group') }}" id="new-group-form">
+                        <div class="mb-3">
+                            <label for="new-name" class="form-label">Group Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="new-name" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="new-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="new-description" name="description" rows="2"></textarea>
+                        </div>
+                        
+                        <!-- Product Elements Section -->
+                        <div class="mb-3">
+                            <label class="form-label">Product Elements</label>
+                            <div class="elements-container" id="new-elements-container">
+                                <div class="row mb-2 element-row">
+                                    <div class="col-5">
+                                        <input type="text" class="form-control" name="element_label[]" placeholder="Label">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" name="element_activity[]" placeholder="Activity">
+                                    </div>
+                                    <div class="col-1">
+                                        <button type="button" class="btn btn-outline-danger delete-element">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-sm btn-outline-primary add-element-btn mt-2" data-container-id="new-elements-container">
+                                <i class="fas fa-plus"></i> Add Element
+                            </button>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-outline-secondary me-2" id="cancel-add-group">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                Create Group
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -97,6 +206,107 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Toggle group edit sections
+        const toggleButtons = document.querySelectorAll('.toggle-group-edit');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const groupId = this.getAttribute('data-group-id');
+                const editSection = document.getElementById(`group-edit-${groupId}`);
+                
+                // Toggle the collapse
+                if (editSection.classList.contains('show')) {
+                    editSection.classList.remove('show');
+                } else {
+                    // Close all other open sections first
+                    document.querySelectorAll('.collapse.show').forEach(section => {
+                        if (section.id !== `group-edit-${groupId}`) {
+                            section.classList.remove('show');
+                        }
+                    });
+                    
+                    // Open this section
+                    editSection.classList.add('show');
+                }
+            });
+        });
+        
+        // Cancel edit buttons
+        const cancelButtons = document.querySelectorAll('.cancel-edit');
+        cancelButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const groupId = this.getAttribute('data-group-id');
+                const editSection = document.getElementById(`group-edit-${groupId}`);
+                editSection.classList.remove('show');
+            });
+        });
+        
+        // Add Group button
+        const addGroupBtn = document.getElementById('add-group-btn');
+        const addGroupForm = document.getElementById('add-group-form');
+        
+        addGroupBtn.addEventListener('click', function() {
+            // Close all other open sections first
+            document.querySelectorAll('.collapse.show').forEach(section => {
+                if (section.id !== 'add-group-form') {
+                    section.classList.remove('show');
+                }
+            });
+            
+            // Toggle the add group form
+            if (addGroupForm.classList.contains('show')) {
+                addGroupForm.classList.remove('show');
+            } else {
+                addGroupForm.classList.add('show');
+            }
+        });
+        
+        // Cancel add group button
+        const cancelAddGroupBtn = document.getElementById('cancel-add-group');
+        cancelAddGroupBtn.addEventListener('click', function() {
+            addGroupForm.classList.remove('show');
+        });
+        
+        // Add element buttons
+        const addElementBtns = document.querySelectorAll('.add-element-btn');
+        addElementBtns.forEach(button => {
+            button.addEventListener('click', function() {
+                const containerId = this.getAttribute('data-container-id');
+                const container = document.getElementById(containerId);
+                
+                const newRow = document.createElement('div');
+                newRow.className = 'row mb-2 element-row';
+                newRow.innerHTML = `
+                    <div class="col-5">
+                        <input type="text" class="form-control" name="element_label[]" placeholder="Label">
+                    </div>
+                    <div class="col-6">
+                        <input type="text" class="form-control" name="element_activity[]" placeholder="Activity">
+                    </div>
+                    <div class="col-1">
+                        <button type="button" class="btn btn-outline-danger delete-element">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(newRow);
+                
+                // Add event listener to the new delete button
+                const newDeleteBtn = newRow.querySelector('.delete-element');
+                newDeleteBtn.addEventListener('click', deleteElementRow);
+            });
+        });
+        
+        // Delete element row function
+        function deleteElementRow() {
+            this.closest('.element-row').remove();
+        }
+        
+        // Add event listeners to existing delete buttons
+        const deleteElementButtons = document.querySelectorAll('.delete-element');
+        deleteElementButtons.forEach(button => {
+            button.addEventListener('click', deleteElementRow);
+        });
+        
         // Delete group button click
         const deleteButtons = document.querySelectorAll('.delete-group');
         deleteButtons.forEach(button => {
@@ -113,6 +323,15 @@
                 // Show modal
                 const modal = new bootstrap.Modal(document.getElementById('deleteGroupModal'));
                 modal.show();
+            });
+        });
+        
+        // Form submission - close collapse after submit
+        const groupForms = document.querySelectorAll('.group-edit-form');
+        groupForms.forEach(form => {
+            form.addEventListener('submit', function() {
+                // The collapse will be closed after the page reloads
+                // This is just a placeholder in case you want to add AJAX submission later
             });
         });
     });

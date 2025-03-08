@@ -1,0 +1,10 @@
+---
+description: Log all dev prompts
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+When user write promt, copy and appent content of that prompt to file @Development_Prompts.md in /docs folder. If file does not exist, create it.
+- You can @ files here
+- You can use markdown but dont have to

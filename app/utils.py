@@ -4,6 +4,9 @@ Utility functions for the application.
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from .models import Role, db
+import logging
+import os
+import sys
 
 def user_has_role(user, role_name):
     """
@@ -98,4 +101,51 @@ def get_user_roles(user):
             if user.username == 'admin':
                 return ['Admin']
     
-    return [] 
+    return []
+
+def setup_logger(name, log_file=None, level=logging.INFO):
+    """
+    Set up a logger for any module in the application.
+    
+    Args:
+        name (str): Name of the logger
+        log_file (str, optional): Path to the log file. If None, a default path will be used.
+        level (int, optional): Logging level. Defaults to INFO.
+        
+    Returns:
+        logging.Logger: Configured logger
+    """
+    # Create logger
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    
+    # Check if logger already has handlers to avoid duplicates
+    if logger.handlers:
+        return logger
+    
+    # Create log directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Set default log file if not provided
+    if log_file is None:
+        log_file = os.path.join(log_dir, f'{name}.log')
+    
+    # Create file handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(level)
+    
+    # Create console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    
+    # Create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger 

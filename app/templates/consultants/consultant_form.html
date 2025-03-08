@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if consultant else 'Create' }} Consultant - Resource Planning Application{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2">
+            <i class="fas fa-user-tie"></i> {{ 'Edit' if consultant else 'Create' }} Consultant
+        </h1>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Consultants
+        </a>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Consultant Information</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="consultantForm">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="user_id" class="form-label">User*</label>
+                    <select class="form-select" id="user_id" name="user_id" required>
+                        <option value="">Select User</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if consultant and consultant.user_id == user.id %}selected{% endif %}>
+                            {{ user.first_name }} {{ user.last_name }} ({{ user.email }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="status" class="form-label">Status*</label>
+                    <select class="form-select" id="status" name="status" required>
+                        {% for status in statuses %}
+                        <option value="{{ status.value }}" {% if consultant and consultant.status == status.value %}selected{% endif %}>
+                            {{ status.value }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="availability_days" class="form-label">Availability (days/month)*</label>
+                    <input type="number" class="form-control" id="availability_days" name="availability_days" 
+                           value="{{ consultant.availability_days_per_month if consultant else 0 }}" min="0" max="31" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="calendar_name" class="form-label">Calendar Name</label>
+                    <input type="text" class="form-control" id="calendar_name" name="calendar_name" 
+                           value="{{ consultant.calendar_name if consultant and consultant.calendar_name else '' }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ consultant.start_date.strftime('%Y-%m-%d') if consultant and consultant.start_date else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ consultant.end_date.strftime('%Y-%m-%d') if consultant and consultant.end_date else '' }}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ consultant.notes if consultant and consultant.notes else '' }}</textarea>
+            </div>
+            
+            <h5 class="mt-4 mb-3">Expertise</h5>
+            {% for category in categories %}
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{{ category.name }}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="expertise_{{ category.id }}" class="form-label">Rating (1-5)</label>
+                            <select class="form-select" id="expertise_{{ category.id }}" name="expertise_{{ category.id }}">
+                                <option value="">Not Applicable</option>
+                                {% for i in range(1, 6) %}
+                                <option value="{{ i }}" 
+                                    {% if consultant and consultant.expertise %}
+                                        {% for exp in consultant.expertise %}
+                                            {% if exp.category_id == category.id and exp.rating == i %}
+                                                selected
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                >
+                                    {{ i }} - {{ ['Beginner', 'Basic', 'Intermediate', 'Advanced', 'Expert'][i-1] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="expertise_notes_{{ category.id }}" class="form-label">Notes</label>
+                            <input type="text" class="form-control" id="expertise_notes_{{ category.id }}" 
+                                   name="expertise_notes_{{ category.id }}" 
+                                   value="{% if consultant and consultant.expertise %}{% for exp in consultant.expertise %}{% if exp.category_id == category.id %}{{ exp.notes }}{% endif %}{% endfor %}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Update' if consultant else 'Create' }} Consultant
+                </button>
+                <a href="{{ url_for('consultants.list_consultants') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any client-side validation or dynamic behavior here
+    });
+</script>
+{% endblock %} 

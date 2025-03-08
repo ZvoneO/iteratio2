@@ -39,4 +39,31 @@ Paid – Project has been completed and payment has been processed.
 Inactive – Project is on hold or no longer active.
 One-Time – Project is a single-instance task or engagement.
 
+**Project Active** - True/False (checkbox)
 
+
+##Product catalog
+1. Product group
+2. Product item
+3. Description
+
+
+Example
+1. Product group **ALP II - Adizes Leadership Program II**
+2. Product items
+
+Sindag	- 1
+Timovi	- 2
+Misija	 - 3
+Struktura	- 4
+Ciljevi - 5
+Budžet	- 6
+Nagrađivanje	 - 7
+Ispit	- 8
+
+
+Project template shoud include
+
+1. Product group
+2. Product phases
+Phase name (text) - Duration (from List) - Description - Online (checkbox) - true/false

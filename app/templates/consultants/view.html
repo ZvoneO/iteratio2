@@ -12,7 +12,7 @@
     </div>
     <div class="col-auto">
         {% if current_user.role == 'Admin' or current_user.role == 'Manager' %}
-        <a href="{{ url_for('consultants.edit_consultant', consultant_id=consultant.id) }}" class="btn btn-primary">
+        <a href="{{ url_for('consultants.manage_consultant', consultant_id=consultant.id) }}" class="btn btn-primary">
             <i class="fas fa-edit"></i> Edit Consultant
         </a>
         {% endif %}

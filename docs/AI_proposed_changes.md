@@ -476,6 +476,46 @@ def delete_consultant(consultant_id):
         return redirect(url_for('consultants.list_consultants'))
 ```
 
+## 5. Implement Product Catalog
+
+### Current Issues:
+- Lack of structured product catalog for project planning
+- No categorization of products and services
+
+### Proposed Solution:
+
+#### Define Data Models:
+
+1. **Product Group Model**:
+   - Represents a category of products or services.
+   - Fields: `id`, `name`, `description`, `created_at`, `updated_at`.
+
+2. **Product Item Model**:
+   - Represents individual products or services.
+   - Fields: `id`, `name`, `description`, `type` (Product/Service), `group_id` (foreign key to ProductGroup), `created_at`, `updated_at`.
+
+#### Database Relationships:
+
+- Establish a one-to-many relationship between `ProductGroup` and `ProductService`.
+
+#### User Interface:
+
+- Create forms and views for managing product groups and items.
+- Ensure easy navigation and management of product catalog.
+
+#### Integration with Project Planning:
+
+- Design the system to link product items with project phases.
+- Ensure seamless integration for future project planning features.
+
+### Implementation Plan:
+
+1. Define `ProductGroup` and `ProductService` models in `models.py`.
+2. Create database migrations to add these models.
+3. Develop routes and templates for managing product groups and items.
+4. Test the product catalog functionality thoroughly.
+5. Plan for integration with project planning features.
+
 ## Implementation Plan
 
 1. Create the unified consultant form template
