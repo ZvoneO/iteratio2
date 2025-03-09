@@ -1,14 +1,22 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from ..models import db, Consultant, User, ExpertiseCategory, ConsultantExpertise, Role, user_roles, List, ListItem, ProductGroup, ProductElement
+from ..models import db, Consultant, User, ConsultantExpertise, Role, user_roles, List, ListItem, ProductGroup, ProductElement
 from functools import wraps
 import json
 import os
-from ..utils import user_has_role as utils_user_has_role, get_user_roles
+import logging
+import traceback
+from ..utils import user_has_role as utils_user_has_role, get_user_roles, setup_logger
 from datetime import datetime, date
 from contextlib import contextmanager
+from sqlalchemy.orm.attributes import flag_modified
 
 consultants_bp = Blueprint('consultants', __name__, url_prefix='/consultants')
+
+# Initialize logger
+logger = setup_logger('consultants', level=logging.DEBUG)
+# Also log to admin log for important events
+admin_logger = logging.getLogger('admin')
 
 # Helper function to check if user has a specific role
 def user_has_role(user, role_name):
@@ -120,28 +128,98 @@ def list_consultants():
     # Get search parameters
     search = request.args.get('search', '')
     status_filter = request.args.get('status', '')
+    expertise_filter = request.args.get('expertise', '')
     
     # Base query
     query = Consultant.query.join(User)
     
     # Apply filters
     if search:
-        query = query.filter(
-            db.or_(
-                User.first_name.ilike(f'%{search}%'),
-                User.last_name.ilike(f'%{search}%'),
-                User.email.ilike(f'%{search}%')
-            )
+        # Search in user data
+        user_match = db.or_(
+            User.first_name.ilike(f'%{search}%'),
+            User.last_name.ilike(f'%{search}%'),
+            User.email.ilike(f'%{search}%')
         )
+        
+        # Get consultants with matching expertise
+        expertise_consultants = []
+        if search:
+            # Search in product groups
+            product_groups = ProductGroup.query.filter(
+                ProductGroup.name.ilike(f'%{search}%')
+            ).all()
+            
+            # Search in product elements
+            product_elements = ProductElement.query.filter(
+                ProductElement.label.ilike(f'%{search}%')
+            ).all()
+            
+            # Get consultant IDs with matching expertise
+            if product_groups:
+                for group in product_groups:
+                    expertise_entries = ConsultantExpertise.query.filter_by(product_group_id=group.id).all()
+                    for entry in expertise_entries:
+                        if entry.consultant_id not in expertise_consultants:
+                            expertise_consultants.append(entry.consultant_id)
+            
+            if product_elements:
+                for element in product_elements:
+                    expertise_entries = ConsultantExpertise.query.filter_by(product_element_id=element.id).all()
+                    for entry in expertise_entries:
+                        if entry.consultant_id not in expertise_consultants:
+                            expertise_consultants.append(entry.consultant_id)
+        
+        # Combine user match and expertise match
+        if expertise_consultants:
+            query = query.filter(
+                db.or_(
+                    user_match,
+                    Consultant.id.in_(expertise_consultants)
+                )
+            )
+        else:
+            query = query.filter(user_match)
     
+    # Apply status filter
     if status_filter:
         query = query.filter(Consultant.status == status_filter)
+    
+    # Apply expertise filter
+    if expertise_filter:
+        expertise_consultants = []
+        
+        # Check if it's a product group or element filter
+        if expertise_filter.startswith('group_'):
+            # Filter by product group
+            group_id = expertise_filter.split('_')[1]
+            expertise_entries = ConsultantExpertise.query.filter_by(product_group_id=group_id).all()
+            for entry in expertise_entries:
+                if entry.consultant_id not in expertise_consultants:
+                    expertise_consultants.append(entry.consultant_id)
+        elif expertise_filter.startswith('element_'):
+            # Filter by product element
+            element_id = expertise_filter.split('_')[1]
+            expertise_entries = ConsultantExpertise.query.filter_by(product_element_id=element_id).all()
+            for entry in expertise_entries:
+                if entry.consultant_id not in expertise_consultants:
+                    expertise_consultants.append(entry.consultant_id)
+        
+        # Apply the expertise filter
+        if expertise_consultants:
+            query = query.filter(Consultant.id.in_(expertise_consultants))
+        else:
+            # If no consultants match the expertise filter, return an empty list
+            query = query.filter(Consultant.id == -1)  # This will return no results
     
     # Get all consultants
     consultants = query.all()
     
     # Get all product groups for expertise selection
     product_groups = ProductGroup.query.all()
+    
+    # Get product elements for filtering
+    product_elements = ProductElement.query.all()
     
     # Get all statuses for filter dropdown
     if status_list:
@@ -155,12 +233,13 @@ def list_consultants():
         ]
     
     # Get user roles for permission checks
-    user_roles = [role.name for role in current_user.roles]
+    user_roles = get_user_roles(current_user)
     
     return render_template('consultants/list.html', 
-                          consultants=consultants,
+                          consultants=consultants, 
                           statuses=statuses,
                           product_groups=product_groups,
+                          product_elements=product_elements,
                           user_roles=user_roles)
 
 @consultants_bp.route('/consultant/<int:consultant_id>', methods=['GET', 'POST'])
@@ -185,8 +264,8 @@ def manage_consultant(consultant_id=None):
         # For new consultants, only show users without consultant entries
         users = User.query.outerjoin(Consultant).filter(Consultant.id == None).all()
     
-    # Get expertise categories
-    categories = ExpertiseCategory.query.all()
+    # Get product groups for expertise selection
+    product_groups = ProductGroup.query.all()
     
     # Get consultant statuses
     status_list = ensure_consultant_status_list()
@@ -243,9 +322,6 @@ def manage_consultant(consultant_id=None):
                 consultant.end_date = end_date
                 consultant.notes = notes if notes and notes.lower() != 'none' else None
                 consultant.calendar_name = calendar_name if calendar_name and calendar_name.lower() != 'none' else None
-                
-                # Remove existing expertise
-                ConsultantExpertise.query.filter_by(consultant_id=consultant.id).delete()
             else:
                 # Create new consultant
                 consultant = Consultant(
@@ -266,17 +342,7 @@ def manage_consultant(consultant_id=None):
             if user and consultant_role and consultant_role not in user.roles:
                 user.roles.append(consultant_role)
             
-            # Process expertise
-            for category in categories:
-                rating = request.form.get(f'expertise_{category.id}')
-                if rating:
-                    expertise = ConsultantExpertise(
-                        consultant_id=consultant.id,
-                        category_id=category.id,
-                        rating=int(rating),
-                        notes=request.form.get(f'expertise_notes_{category.id}')
-                    )
-                    db.session.add(expertise)
+            # Note: Expertise is now handled through the API, not through this form
             
             db.session.commit()
             
@@ -291,7 +357,7 @@ def manage_consultant(consultant_id=None):
     return render_template('consultants/consultant_form.html', 
                           consultant=consultant, 
                           users=users, 
-                          categories=categories,
+                          product_groups=product_groups,
                           statuses=statuses)
 
 def safe_get_attr(obj, attr_name, default=None):
@@ -395,6 +461,8 @@ def db_transaction():
 def update_consultant_expertise():
     """
     Update consultant expertise via AJAX.
+    Uses the ConsultantExpertise table to store expertise data.
+    Only stores meaningful expertise (rating 1-5).
     """
     try:
         data = request.json
@@ -404,80 +472,156 @@ def update_consultant_expertise():
         rating = data.get('rating', 0)  # Default to 0 (clear) if not provided
         notes = data.get('notes', '')
         
+        # Log the request data
+        logger.info(f"Updating expertise for consultant {consultant_id}: {data}")
+        admin_logger.info(f"Consultant expertise update for ID {consultant_id}, {expertise_type} {item_id}")
+        
         if not all([consultant_id, expertise_type, item_id]):
+            error_msg = f'Missing required parameters: consultant_id={consultant_id}, expertise_type={expertise_type}, item_id={item_id}'
+            logger.error(error_msg)
+            admin_logger.error(error_msg)
             return jsonify({'success': False, 'message': 'Missing required parameters'}), 400
         
-        # Get consultant
-        consultant = Consultant.query.get_or_404(consultant_id)
-        
-        # Handle different expertise types
-        if expertise_type == 'product_group' or expertise_type == 'product_element':
-            # For product groups and elements, we'll store them in the custom_data JSON field
-            if not consultant.custom_data:
-                consultant.custom_data = {}
+        try:
+            # Get consultant
+            consultant = Consultant.query.get_or_404(consultant_id)
             
-            if 'expertise' not in consultant.custom_data:
-                consultant.custom_data['expertise'] = {}
+            # Get item name for logging
+            item_name = "Unknown"
+            if expertise_type == 'product_group':
+                group = ProductGroup.query.get(item_id)
+                if group:
+                    item_name = safe_get_attr(group, 'name', f"Group {item_id}")
+            elif expertise_type == 'product_element':
+                element = ProductElement.query.get(item_id)
+                if element:
+                    item_name = element.label
+                    # Also include the group name if available
+                    if hasattr(element, 'group') and element.group:
+                        group_name = safe_get_attr(element.group, 'name', "Unknown Group")
+                        item_name = f"{item_name} ({group_name})"
             
-            expertise_key = f"{expertise_type}_{item_id}"
+            # Handle different expertise types
+            if expertise_type == 'product_group' or expertise_type == 'product_element':
+                # Find existing expertise entry if any
+                if expertise_type == 'product_group':
+                    existing_expertise = ConsultantExpertise.query.filter_by(
+                        consultant_id=consultant_id,
+                        product_group_id=item_id,
+                        product_element_id=None
+                    ).first()
+                else:  # product_element
+                    existing_expertise = ConsultantExpertise.query.filter_by(
+                        consultant_id=consultant_id,
+                        product_element_id=item_id,
+                        product_group_id=None
+                    ).first()
+                
+                if int(rating) == 0:
+                    # Remove expertise if rating is 0
+                    if existing_expertise:
+                        logger.info(f"Removing expertise for {item_name} (ID: {item_id})")
+                        admin_logger.info(f"Removing expertise for {item_name} (ID: {item_id})")
+                        db.session.delete(existing_expertise)
+                elif 1 <= int(rating) <= 5:
+                    # Update or create expertise with valid rating (1-5)
+                    if existing_expertise:
+                        # Update existing entry
+                        existing_expertise.rating = int(rating)
+                        existing_expertise.notes = notes
+                        existing_expertise.updated_at = datetime.utcnow()
+                        logger.info(f"Updating expertise for {item_name} (ID: {item_id}) to rating {rating}")
+                        admin_logger.info(f"Updating expertise for {item_name} (ID: {item_id}) to rating {rating}")
+                    else:
+                        # Create new entry
+                        new_expertise = ConsultantExpertise(
+                            consultant_id=consultant_id,
+                            rating=int(rating),
+                            notes=notes
+                        )
+                        
+                        # Set the appropriate field based on expertise type
+                        if expertise_type == 'product_group':
+                            new_expertise.product_group_id = item_id
+                        else:  # product_element
+                            new_expertise.product_element_id = item_id
+                        
+                        db.session.add(new_expertise)
+                        logger.info(f"Creating new expertise for {item_name} (ID: {item_id}) with rating {rating}")
+                        admin_logger.info(f"Creating new expertise for {item_name} (ID: {item_id}) with rating {rating}")
+                else:
+                    # Invalid rating
+                    error_msg = f"Invalid rating value: {rating}. Must be between 1 and 5."
+                    logger.error(error_msg)
+                    admin_logger.error(error_msg)
+                    return jsonify({'success': False, 'message': error_msg}), 400
             
+            # Save changes
+            db.session.commit()
+            
+            success_msg = f"Expertise updated for consultant {consultant_id}"
             if int(rating) == 0:
-                # Remove expertise if rating is 0
-                if expertise_key in consultant.custom_data['expertise']:
-                    del consultant.custom_data['expertise'][expertise_key]
+                success_msg = f"Expertise removed for {item_name}"
             else:
-                # Update or create expertise
-                consultant.custom_data['expertise'][expertise_key] = {
-                    'type': expertise_type,
-                    'id': item_id,
-                    'rating': int(rating),
-                    'notes': notes
-                }
+                success_msg = f"Expertise set to {rating} stars for {item_name}"
+                
+            logger.info(success_msg)
+            admin_logger.info(success_msg)
+            return jsonify({'success': True, 'message': success_msg})
         
-        # Save changes
-        db.session.commit()
-        
-        return jsonify({'success': True})
+        except Exception as inner_e:
+            db.session.rollback()
+            error_msg = f"Error processing expertise update: {str(inner_e)}"
+            stack_trace = traceback.format_exc()
+            logger.error(f"{error_msg}\n{stack_trace}")
+            admin_logger.error(f"{error_msg}\n{stack_trace}")
+            return jsonify({'success': False, 'message': 'Error updating expertise', 'error_details': str(inner_e)}), 500
     
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        error_msg = f"Error updating expertise for consultant: {str(e)}"
+        stack_trace = traceback.format_exc()
+        logger.error(f"{error_msg}\n{stack_trace}")
+        admin_logger.error(f"{error_msg}\n{stack_trace}")
+        return jsonify({
+            'success': False, 
+            'message': 'Error updating expertise. Please try again.',
+            'error_details': str(e)
+        }), 500
 
 @consultants_bp.route('/expertise/list/<int:consultant_id>', methods=['GET'])
 @login_required
 def list_consultant_expertise(consultant_id):
     """
     Get all expertise for a consultant in JSON format.
+    Uses the ConsultantExpertise table to retrieve expertise data.
     """
     try:
         consultant = Consultant.query.get_or_404(consultant_id)
         expertise_list = []
         
-        # Get product group and element expertise from custom_data
-        if consultant.custom_data and 'expertise' in consultant.custom_data:
-            for key, exp_data in consultant.custom_data['expertise'].items():
-                if exp_data['type'] == 'product_group':
-                    # Get product group name
-                    group = ProductGroup.query.get(exp_data['id'])
-                    if group:
-                        expertise_list.append({
-                            'type': 'product_group',
-                            'id': exp_data['id'],
-                            'name': group.name,
-                            'rating': exp_data['rating'],
-                            'notes': exp_data.get('notes', '')
-                        })
-                elif exp_data['type'] == 'product_element':
-                    # Get product element name
-                    element = ProductElement.query.get(exp_data['id'])
-                    if element:
-                        expertise_list.append({
-                            'type': 'product_element',
-                            'id': exp_data['id'],
-                            'name': f"{element.label} ({element.group.name})",
-                            'rating': exp_data['rating'],
-                            'notes': exp_data.get('notes', '')
-                        })
+        # Get all expertise entries for the consultant
+        expertise_entries = ConsultantExpertise.query.filter_by(consultant_id=consultant_id).all()
+        
+        for entry in expertise_entries:
+            if entry.product_group_id:
+                # This is a product group expertise
+                expertise_list.append({
+                    'type': 'product_group',
+                    'id': entry.product_group_id,
+                    'name': entry.item_name,
+                    'rating': entry.rating,
+                    'notes': entry.notes or ''
+                })
+            elif entry.product_element_id:
+                # This is a product element expertise
+                expertise_list.append({
+                    'type': 'product_element',
+                    'id': entry.product_element_id,
+                    'name': entry.item_name,
+                    'rating': entry.rating,
+                    'notes': entry.notes or ''
+                })
         
         return jsonify({
             'success': True,
@@ -485,6 +629,9 @@ def list_consultant_expertise(consultant_id):
         })
     
     except Exception as e:
+        error_msg = f"Error listing expertise for consultant: {str(e)}"
+        stack_trace = traceback.format_exc()
+        logger.error(f"{error_msg}\n{stack_trace}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @consultants_bp.route('/update/<int:consultant_id>', methods=['POST'])
@@ -501,27 +648,68 @@ def update_consultant_details(consultant_id):
         calendar_name = data.get('calendar_name')
         notes = data.get('notes')
         
+        # Log the request data
+        logger.info(f"Updating consultant {consultant_id} with data: {data}")
+        admin_logger.info(f"Consultant update request for ID {consultant_id}")
+        
         # Get consultant
         consultant = Consultant.query.get_or_404(consultant_id)
         
+        # Track if any changes were made
+        changes_made = False
+        
         # Update consultant details
-        if status:
+        if status and status != consultant.status:
+            logger.info(f"Updating status from '{consultant.status}' to '{status}'")
             consultant.status = status
+            changes_made = True
         
         if availability_days is not None:
-            consultant.availability_days_per_month = int(availability_days)
+            try:
+                availability_days = int(availability_days)
+                if availability_days != consultant.availability_days_per_month:
+                    logger.info(f"Updating availability from {consultant.availability_days_per_month} to {availability_days}")
+                    consultant.availability_days_per_month = availability_days
+                    changes_made = True
+            except ValueError as e:
+                error_msg = f"Invalid availability value: {availability_days}"
+                logger.error(error_msg)
+                admin_logger.error(error_msg)
+                return jsonify({'success': False, 'message': error_msg}), 400
         
         if calendar_name is not None:
-            consultant.calendar_name = calendar_name if calendar_name.strip() else None
+            new_calendar_name = calendar_name.strip() if calendar_name.strip() else None
+            if new_calendar_name != consultant.calendar_name:
+                logger.info(f"Updating calendar name from '{consultant.calendar_name}' to '{new_calendar_name}'")
+                consultant.calendar_name = new_calendar_name
+                changes_made = True
         
         if notes is not None:
-            consultant.notes = notes if notes.strip() else None
+            new_notes = notes.strip() if notes.strip() else None
+            if new_notes != consultant.notes:
+                logger.info(f"Updating notes for consultant {consultant_id}")
+                consultant.notes = new_notes
+                changes_made = True
         
         # Save changes
-        db.session.commit()
-        
-        return jsonify({'success': True})
+        if changes_made:
+            db.session.commit()
+            success_msg = f"Consultant {consultant_id} updated successfully"
+            logger.info(success_msg)
+            admin_logger.info(success_msg)
+            return jsonify({'success': True, 'message': success_msg})
+        else:
+            logger.info(f"No changes detected for consultant {consultant_id}")
+            return jsonify({'success': True, 'message': 'No changes were made'})
     
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500 
+        error_msg = f"Error updating consultant {consultant_id}: {str(e)}"
+        stack_trace = traceback.format_exc()
+        logger.error(f"{error_msg}\n{stack_trace}")
+        admin_logger.error(f"{error_msg}\n{stack_trace}")
+        return jsonify({
+            'success': False, 
+            'message': 'Error updating consultant. Please try again.',
+            'error_details': str(e)
+        }), 500 

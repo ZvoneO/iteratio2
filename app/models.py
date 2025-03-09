@@ -49,8 +49,8 @@ class Consultant(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     custom_data = db.Column(db.JSON, nullable=True)  # For flexible, evolving attributes
     
-    # Relationships
-    expertise = db.relationship('ConsultantExpertise', backref='consultant', lazy=True, cascade="all, delete-orphan")
+    # Relationships - updated to use expertise_entries instead of expertise
+    expertise_entries = db.relationship('ConsultantExpertise', backref='consultant', lazy=True, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f'<Consultant {self.user.first_name} {self.user.last_name}>'
@@ -72,6 +72,7 @@ class ExpertiseCategory(db.Model):
     """
     Expertise categories for consultants.
     Defines different areas of expertise that consultants can have.
+    Note: This model is kept for historical purposes but is no longer used with the new expertise system.
     """
     __tablename__ = 'expertise_categories'
     
@@ -81,8 +82,7 @@ class ExpertiseCategory(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    consultant_expertise = db.relationship('ConsultantExpertise', backref='category', lazy=True)
+    # No relationships with ConsultantExpertise anymore
     
     def __repr__(self):
         return f'<ExpertiseCategory {self.name}>'
@@ -91,20 +91,42 @@ class ExpertiseCategory(db.Model):
 class ConsultantExpertise(db.Model):
     """
     Consultant expertise mapping.
-    Links consultants to expertise categories with ratings.
+    Links consultants to product groups and elements with ratings.
+    Ensures only meaningful expertise (rating 1-5) is stored.
     """
     __tablename__ = 'consultant_expertise'
     
     id = db.Column(db.Integer, primary_key=True)
     consultant_id = db.Column(db.Integer, db.ForeignKey('consultants.id', ondelete='CASCADE'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('expertise_categories.id', ondelete='CASCADE'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)  # 1-5 rating
+    product_group_id = db.Column(db.Integer, db.ForeignKey('product_groups.id', ondelete='CASCADE'), nullable=True)
+    product_element_id = db.Column(db.Integer, db.ForeignKey('product_elements.id', ondelete='CASCADE'), nullable=True)
+    rating = db.Column(db.Integer, nullable=False)  # 1-5 rating, enforced by CHECK constraint
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Relationships - use existing relationship from Consultant model
+    product_group = db.relationship('ProductGroup', backref=db.backref('expertise_entries', lazy=True))
+    product_element = db.relationship('ProductElement', backref=db.backref('expertise_entries', lazy=True))
+    
     def __repr__(self):
-        return f'<ConsultantExpertise {self.consultant_id}-{self.category_id}>'
+        if self.product_group_id:
+            return f'<ConsultantExpertise {self.consultant_id}-Group:{self.product_group_id}>'
+        else:
+            return f'<ConsultantExpertise {self.consultant_id}-Element:{self.product_element_id}>'
+            
+    @property
+    def item_name(self):
+        """Get a formatted name for the expertise item."""
+        if self.product_group_id and self.product_group:
+            return self.product_group.name
+        elif self.product_element_id and self.product_element:
+            element_name = self.product_element.label
+            if hasattr(self.product_element, 'group') and self.product_element.group:
+                group_name = self.product_element.group.name
+                return f"{element_name} ({group_name})"
+            return element_name
+        return "Unknown"
 
 # Lists for dropdown values
 class List(db.Model):
@@ -161,6 +183,10 @@ class Client(db.Model):
     address = db.Column(db.String(200))
     city = db.Column(db.String(100))
     country_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
+    sales_person = db.Column(db.String(100))  # Sales person name
+    project_manager = db.Column(db.String(100))  # Project manager name
+    industry = db.Column(db.String(100))  # Industry field
+    active = db.Column(db.Boolean, default=True)  # Active status
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -233,15 +259,69 @@ class Project(db.Model):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     status = db.Column(db.String(20))  # Active, Completed, On Hold
+    status_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
+    industry_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
+    profit_center_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     products = db.relationship('ProductService', secondary='project_products', lazy='subquery',
                               backref=db.backref('projects', lazy=True))
+    groups = db.relationship('ProjectGroup', backref='project', lazy=True, cascade="all, delete-orphan", order_by="ProjectGroup.order")
+    industry = db.relationship('ListItem', foreign_keys=[industry_id])
+    profit_center = db.relationship('ListItem', foreign_keys=[profit_center_id])
+    status_item = db.relationship('ListItem', foreign_keys=[status_id])
+    manager = db.relationship('User', foreign_keys=[manager_id])
     
     def __repr__(self):
         return f'<Project {self.name}>'
+
+# Project Group model
+class ProjectGroup(db.Model):
+    """
+    Project Group model.
+    Represents a group of project phases (Level I in the project hierarchy).
+    """
+    __tablename__ = 'project_groups'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    product_group_id = db.Column(db.Integer, db.ForeignKey('product_groups.id'), nullable=False)
+    order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    phases = db.relationship('ProjectPhase', backref='group', lazy=True, cascade="all, delete-orphan", order_by="ProjectPhase.order")
+    product_group = db.relationship('ProductGroup', foreign_keys=[product_group_id])
+    
+    def __repr__(self):
+        return f'<ProjectGroup {self.product_group.name if self.product_group else "Unknown"} for Project {self.project_id}>'
+
+# Project Phase model
+class ProjectPhase(db.Model):
+    """
+    Project Phase model.
+    Represents a phase within a project group (Level II in the project hierarchy).
+    """
+    __tablename__ = 'project_phases'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('project_groups.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    duration_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
+    online = db.Column(db.Boolean, default=False)
+    order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    duration = db.relationship('ListItem', foreign_keys=[duration_id])
+    
+    def __repr__(self):
+        return f'<ProjectPhase {self.name} for Group {self.group_id}>'
 
 # Product group model
 class ProductGroup(db.Model):
@@ -254,12 +334,14 @@ class ProductGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
+    duration_id = db.Column(db.Integer, db.ForeignKey('list_items.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     products = db.relationship('ProductService', backref='group', lazy=True)
     elements = db.relationship('ProductElement', backref='group', lazy=True, cascade='all, delete-orphan')
+    duration = db.relationship('ListItem', foreign_keys=[duration_id])
     
     def __repr__(self):
         return f'<ProductGroup {self.name}>'

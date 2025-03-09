@@ -2,6 +2,67 @@
 
 {% block title %}Create Project - Resource Planning Application{% endblock %}
 
+{% block extra_css %}
+<style>
+    .phase-item {
+        border: 1px solid #e9ecef;
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background-color: #f8f9fa;
+    }
+    .group-item {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        background-color: #fff;
+    }
+    .drag-handle {
+        cursor: move;
+        color: #6c757d;
+    }
+    .phase-header, .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .client-result {
+        transition: background-color 0.2s;
+    }
+    .client-result:hover {
+        background-color: #f8f9fa;
+    }
+    .client-result:last-child {
+        border-bottom: none !important;
+    }
+    .phase-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .phase-content {
+        display: flex;
+        flex: 1;
+        gap: 1rem;
+        align-items: center;
+    }
+    .phase-name-input {
+        flex: 2;
+    }
+    .phase-duration-select {
+        flex: 1;
+    }
+    .phase-online-check {
+        flex: 0 0 auto;
+    }
+    .phase-description-input {
+        flex: 2;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
@@ -17,148 +78,670 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Project Information</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('projects.create_project') }}">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="name" class="form-label">Project Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" placeholder="Enter project name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="code" class="form-label">Project Code</label>
-                                <input type="text" class="form-control" id="code" name="code" placeholder="Enter project code">
-                                <div class="form-text">Optional unique identifier for this project</div>
-                            </div>
-                        </div>
+<form method="POST" action="{{ url_for('projects.create_project') }}" id="create-project-form">
+    <!-- Project Information -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">Project Information</h5>
+        </div>
+        <div class="card-body">
+            <!-- First Row: Name, Description, Client -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="name" class="form-label">Project Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter project name" required>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="client_id" class="form-label">Client</label>
-                                <select class="form-control" id="client_id" name="client_id">
-                                    <option value="">Select a client</option>
-                                    {% for client in clients %}
-                                    <option value="{{ client.id }}">{{ client.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                                <select class="form-control" id="status" name="status" required>
-                                    <option value="">Select a status</option>
-                                    <option value="Planning">Planning</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="On Hold">On Hold</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="start_date" class="form-label">Start Date</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="end_date" class="form-label">End Date</label>
-                                <input type="date" class="form-control" id="end_date" name="end_date">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="budget" class="form-label">Budget</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control" id="budget" name="budget" placeholder="0.00">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="priority" class="form-label">Priority</label>
-                                <select class="form-control" id="priority" name="priority">
-                                    <option value="">Select a priority</option>
-                                    <option value="Low">Low</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="High">High</option>
-                                    <option value="Critical">Critical</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group mb-3">
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
                         <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter project description"></textarea>
+                        <input type="text" class="form-control" id="description" name="description" placeholder="Enter project description">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="client_search" class="form-label">Client <span class="text-danger">*</span></label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="client_search" placeholder="Search for a client..." autocomplete="off">
+                            <div id="client_results" class="dropdown-results position-absolute w-100 mt-1 shadow-sm" style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto; background-color: white; border: 1px solid #dee2e6; border-radius: 0.25rem;"></div>
+                            <input type="hidden" id="client_id" name="client_id" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Row: Manager, Dates -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="manager_id" class="form-label">Project Manager <span class="text-danger">*</span></label>
+                        <select class="form-select" id="manager_id" name="manager_id" required>
+                            <option value="">Select a manager</option>
+                            {% for manager in managers %}
+                            <option value="{{ manager.id }}">{{ manager.first_name }} {{ manager.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Third Row: Industry, Profit Center -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="industry_id" class="form-label">Industry</label>
+                        <select class="form-select" id="industry_id" name="industry_id">
+                            <option value="">Select industry</option>
+                            {% for industry in industries %}
+                            <option value="{{ industry.id }}">{{ industry.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="profit_center_id" class="form-label">Profit Center</label>
+                        <select class="form-select" id="profit_center_id" name="profit_center_id">
+                            <option value="">Select profit center</option>
+                            {% for center in profit_centers %}
+                            <option value="{{ center.id }}">{{ center.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+            
+    <!-- Project Structure -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">Project Structure</h5>
+        </div>
+        <div class="card-body">
+            <div id="project-groups-container">
+                <!-- Project groups will be added here dynamically -->
+            </div>
+            
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-outline-primary" id="add-group-btn">
+                    <i class="fas fa-plus"></i> Add Project Group
+                </button>
+            </div>
+            
+            <!-- Hidden input to store project structure data -->
+            <input type="hidden" name="group_data" id="group-data-input">
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mb-4">
+        <div class="col-md-6 offset-md-3">
+            <button type="submit" class="btn btn-primary w-100 mb-3">
+                <i class="fas fa-save"></i> Create Project
+            </button>
+            <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client search handling
+        const clientSearchInput = document.getElementById('client_search');
+        const clientResultsDiv = document.getElementById('client_results');
+        const clientIdInput = document.getElementById('client_id');
+        const clientLocation = document.getElementById('client_location');
+        const clientSales = document.getElementById('client_sales');
+        const clientNotFoundDiv = document.getElementById('client_not_found');
+        
+        let searchTimeout;
+        let selectedClient = null;
+        
+        // Function to search for clients
+        function searchClients(query) {
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to prevent too many requests
+            searchTimeout = setTimeout(() => {
+                if (query.length < 2) {
+                    clientResultsDiv.style.display = 'none';
+                    clientNotFoundDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Make AJAX request to search for clients
+                fetch(`/clients/search?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear previous results
+                        clientResultsDiv.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            clientNotFoundDiv.style.display = 'block';
+                            clientResultsDiv.style.display = 'none';
+                            return;
+                        }
+                        
+                        clientNotFoundDiv.style.display = 'none';
+                        
+                        // Add results to dropdown
+                        data.forEach(client => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'p-2 border-bottom client-result';
+                            resultItem.style.cursor = 'pointer';
+                            resultItem.innerHTML = `<strong>${client.name}</strong>`;
+                            if (client.city || client.country) {
+                                resultItem.innerHTML += `<br><small>${client.city}${client.city && client.country ? ', ' : ''}${client.country}</small>`;
+                            }
+                            
+                            // Add click event to select client
+                            resultItem.addEventListener('click', () => {
+                                selectClient(client);
+                            });
+                            
+                            clientResultsDiv.appendChild(resultItem);
+                        });
+                        
+                        // Show results dropdown
+                        clientResultsDiv.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error searching for clients:', error);
+                    });
+            }, 300); // 300ms delay to prevent too many requests
+        }
+        
+        // Function to select a client
+        function selectClient(client) {
+            selectedClient = client;
+            
+            // Update input values
+            clientSearchInput.value = client.name;
+            clientIdInput.value = client.id;
+            
+            // Update client info
+            let locationText = '';
+            if (client.city && client.country) {
+                locationText = `${client.city}, ${client.country}`;
+            } else if (client.city) {
+                locationText = client.city;
+            } else if (client.country) {
+                locationText = client.country;
+            } else {
+                locationText = 'No location information';
+            }
+            
+            clientLocation.textContent = locationText;
+            
+            let salesText = '';
+            if (client.sales_person) {
+                salesText = `Sales: ${client.sales_person}`;
+                if (client.project_manager) {
+                    salesText += ` | PM: ${client.project_manager}`;
+                }
+            } else if (client.project_manager) {
+                salesText = `PM: ${client.project_manager}`;
+            }
+            
+            clientSales.textContent = salesText;
+            
+            // Hide results dropdown
+            clientResultsDiv.style.display = 'none';
+            clientNotFoundDiv.style.display = 'none';
+        }
+        
+        // Add event listener for input changes
+        clientSearchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            searchClients(query);
+            
+            // Clear selected client if input is empty
+            if (query === '') {
+                clientIdInput.value = '';
+                clientLocation.textContent = 'Select a client to see details';
+                clientSales.textContent = '';
+                selectedClient = null;
+            }
+        });
+        
+        // Add event listener for focus
+        clientSearchInput.addEventListener('focus', function() {
+            const query = this.value.trim();
+            if (query.length >= 2) {
+                searchClients(query);
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!clientSearchInput.contains(event.target) && !clientResultsDiv.contains(event.target)) {
+                clientResultsDiv.style.display = 'none';
+                
+                // If no client is selected and input is not empty, show not found message
+                if (!selectedClient && clientSearchInput.value.trim() !== '') {
+                    clientNotFoundDiv.style.display = 'block';
+                }
+            }
+        });
+        
+        // Project Groups and Phases Management
+        const groupsContainer = document.getElementById('project-groups-container');
+        const addGroupBtn = document.getElementById('add-group-btn');
+        const groupDataInput = document.getElementById('group-data-input');
+        let groupCounter = 0;
+        
+        // Add a new project group
+        addGroupBtn.addEventListener('click', function() {
+            addProjectGroup();
+        });
+        
+        // Function to add a new project group
+        function addProjectGroup() {
+            const groupId = 'group-' + groupCounter++;
+            const groupHtml = `
+                <div class="group-item" id="${groupId}">
+                    <div class="group-header">
+                        <div class="drag-handle group-drag-handle">
+                            <i class="fas fa-grip-vertical me-2"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <select class="form-select product-group-select" required>
+                                <option value="">Select Product Group</option>
+                                {% for group in product_groups %}
+                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-sm btn-outline-primary populate-phases-btn me-2" title="Populate phases from product group elements">
+                                <i class="fas fa-sync-alt"></i> Populate
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-group-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="form-group mb-3">
-                        <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Enter any additional notes"></textarea>
+                    <div class="phases-container">
+                        <!-- Phases will be added here -->
                     </div>
                     
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="reset" class="btn btn-outline-secondary me-md-2">Reset</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Create Project
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary add-phase-btn">
+                            <i class="fas fa-plus"></i> Add Phase
                         </button>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4">
-        <div class="card shadow mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">Project Creation Guide</h5>
-            </div>
-            <div class="card-body">
-                <h6>Required Fields</h6>
-                <ul class="mb-3">
-                    <li>Project Name - A descriptive name for the project</li>
-                    <li>Status - The current status of the project</li>
-                </ul>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = groupHtml;
+            const groupElement = tempDiv.firstElementChild;
+            groupsContainer.appendChild(groupElement);
+            
+            // Initialize sortable for phases
+            const phasesContainer = groupElement.querySelector('.phases-container');
+            new Sortable(phasesContainer, {
+                handle: '.phase-drag-handle',
+                animation: 150,
+                onEnd: updateGroupData
+            });
+            
+            // Add event listener for adding phases
+            const addPhaseBtn = groupElement.querySelector('.add-phase-btn');
+            addPhaseBtn.addEventListener('click', function() {
+                addPhase(phasesContainer);
+            });
+            
+            // Add event listener for deleting group
+            const deleteGroupBtn = groupElement.querySelector('.delete-group-btn');
+            deleteGroupBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to delete this group?')) {
+                    groupElement.remove();
+                    updateGroupData();
+                }
+            });
+            
+            // Add event listener for the populate button
+            const populatePhasesBtn = groupElement.querySelector('.populate-phases-btn');
+            populatePhasesBtn.addEventListener('click', function() {
+                const productGroupSelect = groupElement.querySelector('.product-group-select');
+                const groupId = productGroupSelect.value;
                 
-                <h6>Project Status</h6>
-                <ul class="mb-3">
-                    <li><span class="badge bg-info">Planning</span> - Project is in the planning phase</li>
-                    <li><span class="badge bg-primary">In Progress</span> - Project is currently active</li>
-                    <li><span class="badge bg-success">Completed</span> - Project has been completed</li>
-                    <li><span class="badge bg-warning">On Hold</span> - Project is temporarily paused</li>
-                    <li><span class="badge bg-danger">Cancelled</span> - Project has been cancelled</li>
-                </ul>
+                if (!groupId) {
+                    alert('Please select a Product Group first.');
+                    return;
+                }
                 
-                <h6>Next Steps</h6>
-                <p class="small">After creating the project, you'll be able to:</p>
-                <ul class="small">
-                    <li>Assign team members to the project</li>
-                    <li>Create tasks and milestones</li>
-                    <li>Add resources and budget details</li>
-                    <li>Set up project timeline and deliverables</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
+                // Show loading state
+                populatePhasesBtn.disabled = true;
+                populatePhasesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                
+                // Clear existing phases
+                phasesContainer.innerHTML = '';
+                
+                // Fetch product elements for this group
+                fetch(`/projects/api/product-groups/${groupId}/elements`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.elements && data.elements.length > 0) {
+                            // Add a phase for each product element
+                            data.elements.forEach(element => {
+                                addPhaseFromElement(phasesContainer, element, data.group.duration_id);
+                            });
+                            
+                            // Show success message
+                            const successMessage = document.createElement('div');
+                            successMessage.className = 'alert alert-success mt-2 mb-2';
+                            successMessage.innerHTML = `<i class="fas fa-check-circle"></i> Created ${data.elements.length} phases from "${data.group.name}" elements.`;
+                            phasesContainer.prepend(successMessage);
+                            
+                            // Auto-hide the message after 5 seconds
+                            setTimeout(() => {
+                                successMessage.remove();
+                            }, 5000);
+                        } else {
+                            // Add a default empty phase if no elements exist
+                            addPhase(phasesContainer);
+                            
+                            // Show warning message
+                            const warningMessage = document.createElement('div');
+                            warningMessage.className = 'alert alert-warning mt-2 mb-2';
+                            warningMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> No elements found in the selected Product Group. Added an empty phase instead.`;
+                            phasesContainer.prepend(warningMessage);
+                            
+                            // Auto-hide the message after 5 seconds
+                            setTimeout(() => {
+                                warningMessage.remove();
+                            }, 5000);
+                        }
+                        updateGroupData();
+                    })
+                    .catch(error => {
+                        console.error('Error fetching product elements:', error);
+                        // Add a default empty phase if there was an error
+                        addPhase(phasesContainer);
+                        
+                        // Show error message
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'alert alert-danger mt-2 mb-2';
+                        errorMessage.innerHTML = `<i class="fas fa-times-circle"></i> Error loading elements: ${error.message}. Added an empty phase instead.`;
+                        phasesContainer.prepend(errorMessage);
+                        
+                        // Auto-hide the message after 5 seconds
+                        setTimeout(() => {
+                            errorMessage.remove();
+                        }, 5000);
+                        
+                        updateGroupData();
+                    })
+                    .finally(() => {
+                        // Reset button state
+                        populatePhasesBtn.disabled = false;
+                        populatePhasesBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Populate';
+                    });
+            });
+            
+            // Add event listener for product group selection
+            const productGroupSelect = groupElement.querySelector('.product-group-select');
+            productGroupSelect.addEventListener('change', function() {
+                updateGroupData();
+                
+                // Show a tooltip to remind the user about the populate button
+                if (this.value) {
+                    const groupId = this.value;
+                    const groupName = this.options[this.selectedIndex].text;
+                    
+                    // Create a tooltip message
+                    const tooltipMessage = document.createElement('div');
+                    tooltipMessage.className = 'alert alert-info mt-2 mb-2';
+                    tooltipMessage.innerHTML = `<i class="fas fa-info-circle"></i> Selected "${groupName}". Click "Populate" to automatically create phases from this group's elements.`;
+                    
+                    // Check if there's already a tooltip
+                    const existingTooltip = phasesContainer.querySelector('.alert-info');
+                    if (existingTooltip) {
+                        existingTooltip.remove();
+                    }
+                    
+                    // Add the tooltip
+                    if (phasesContainer.children.length === 0) {
+                        phasesContainer.appendChild(tooltipMessage);
+                    } else {
+                        phasesContainer.insertBefore(tooltipMessage, phasesContainer.firstChild);
+                    }
+                    
+                    // Auto-hide the tooltip after 5 seconds
+                    setTimeout(() => {
+                        tooltipMessage.remove();
+                    }, 5000);
+                    
+                    // Highlight the populate button
+                    const populateBtn = groupElement.querySelector('.populate-phases-btn');
+                    populateBtn.classList.add('btn-primary');
+                    populateBtn.classList.remove('btn-outline-primary');
+                    setTimeout(() => {
+                        populateBtn.classList.remove('btn-primary');
+                        populateBtn.classList.add('btn-outline-primary');
+                    }, 2000);
+                }
+            });
+            
+            // Add at least one phase
+            addPhase(phasesContainer);
+            
+            // Update the hidden input with the structure data
+            updateGroupData();
+        }
+        
+        // Function to add a new phase to a group
+        function addPhase(phasesContainer) {
+            const phaseId = 'phase-' + Date.now();
+            const phaseHtml = `
+                <div class="phase-item" id="${phaseId}">
+                    <div class="drag-handle phase-drag-handle">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="phase-content">
+                        <input type="text" class="form-control phase-name phase-name-input" placeholder="Phase Name" required>
+                        <select class="form-select phase-duration phase-duration-select">
+                            <option value="">Duration</option>
+                            {% for duration in phase_durations %}
+                            <option value="{{ duration.id }}">{{ duration.value }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-check phase-online-check">
+                            <input class="form-check-input phase-online" type="checkbox" value="1">
+                            <label class="form-check-label">Online</label>
+                        </div>
+                        <input type="text" class="form-control phase-description phase-description-input" placeholder="Phase Description">
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-phase-btn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = phaseHtml;
+            const phaseElement = tempDiv.firstElementChild;
+            phasesContainer.appendChild(phaseElement);
+            
+            // Add event listener for deleting phase
+            const deletePhaseBtn = phaseElement.querySelector('.delete-phase-btn');
+            deletePhaseBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to delete this phase?')) {
+                    phaseElement.remove();
+                    updateGroupData();
+                }
+            });
+            
+            // Add event listeners for phase inputs
+            const phaseInputs = phaseElement.querySelectorAll('input, select, textarea');
+            phaseInputs.forEach(input => {
+                input.addEventListener('change', updateGroupData);
+            });
+            
+            // Update the hidden input with the structure data
+            updateGroupData();
+            
+            return phaseElement;
+        }
+        
+        // Function to add a new phase from a product element
+        function addPhaseFromElement(phasesContainer, element, groupDurationId) {
+            const phaseElement = addPhase(phasesContainer);
+            
+            // Set phase name from element label
+            const nameInput = phaseElement.querySelector('.phase-name');
+            nameInput.value = element.label || '';
+            
+            // Set phase description from element activity
+            const descriptionTextarea = phaseElement.querySelector('.phase-description');
+            descriptionTextarea.value = element.activity || '';
+            
+            // Set phase duration from group duration
+            const durationSelect = phaseElement.querySelector('.phase-duration');
+            if (groupDurationId) {
+                durationSelect.value = groupDurationId;
+            }
+            
+            // Add a subtle animation to highlight the new phase
+            phaseElement.style.transition = 'background-color 1s ease';
+            phaseElement.style.backgroundColor = '#e6f7ff';
+            setTimeout(() => {
+                phaseElement.style.backgroundColor = '';
+            }, 1000);
+            
+            return phaseElement;
+        }
+        
+        // Function to update the hidden input with the structure data
+        function updateGroupData() {
+            const groupData = [];
+            
+            // Get all groups
+            const groups = groupsContainer.querySelectorAll('.group-item');
+            groups.forEach(group => {
+                const productGroupSelect = group.querySelector('.product-group-select');
+                const productGroupId = productGroupSelect.value;
+                
+                if (productGroupId) {
+                    const phases = [];
+                    
+                    // Get all phases in this group
+                    const phaseElements = group.querySelectorAll('.phase-item');
+                    phaseElements.forEach(phase => {
+                        const phaseName = phase.querySelector('.phase-name').value;
+                        const phaseDuration = phase.querySelector('.phase-duration').value;
+                        const phaseOnline = phase.querySelector('.phase-online').checked;
+                        const phaseDescription = phase.querySelector('.phase-description').value;
+                        
+                        phases.push({
+                            name: phaseName,
+                            duration_id: phaseDuration || null,
+                            online: phaseOnline,
+                            description: phaseDescription
+                        });
+                    });
+                    
+                    groupData.push({
+                        product_group_id: productGroupId,
+                        phases: phases
+                    });
+                }
+            });
+            
+            // Update the hidden input
+            groupDataInput.value = JSON.stringify(groupData);
+        }
+        
+        // Initialize sortable for groups
+        new Sortable(groupsContainer, {
+            handle: '.group-drag-handle',
+            animation: 150,
+            onEnd: updateGroupData
+        });
+        
+        // Form submission validation
+        const form = document.getElementById('create-project-form');
+        form.addEventListener('submit', function(e) {
+            // Validate client selection
+            if (!clientIdInput.value) {
+                e.preventDefault();
+                alert('Please select a valid client.');
+                clientSearchInput.focus();
+                return;
+            }
+            
+            // Validate that there's at least one group with at least one phase
+            const groupData = JSON.parse(groupDataInput.value || '[]');
+            if (groupData.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one project group with at least one phase.');
+                return;
+            }
+            
+            // Validate that each group has at least one phase
+            for (const group of groupData) {
+                if (group.phases.length === 0) {
+                    e.preventDefault();
+                    alert('Each project group must have at least one phase.');
+                    return;
+                }
+            }
+            
+            // Validate start and end dates
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            if (startDate && endDate) {
+                const startDateObj = new Date(startDate);
+                const endDateObj = new Date(endDate);
+                if (startDateObj > endDateObj) {
+                    e.preventDefault();
+                    alert('End date must be after start date.');
+                    return;
+                }
+            }
+        });
+        
+        // Template selection handling
+        const templateSelect = document.getElementById('template_id');
+        templateSelect.addEventListener('change', function() {
+            if (this.value) {
+                // TODO: Implement template loading via AJAX
+                alert('Template loading will be implemented in a future update.');
+            }
+        });
+        
+        // Add an initial group
+        addProjectGroup();
+    });
+</script>
 {% endblock %} 

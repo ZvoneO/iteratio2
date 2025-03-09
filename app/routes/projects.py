@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from ..models import db, Project, ProjectTemplate, PhaseTemplate, User, Client, ProductService, Role
+from ..models import db, Project, ProjectTemplate, PhaseTemplate, User, Client, ProductService, Role, ProjectGroup, ProjectPhase, ProductGroup, List, ListItem
 from functools import wraps
 import os
 import json
@@ -65,21 +65,48 @@ def project_manager_required(f):
 @login_required
 def list_projects():
     """
-    Display a list of projects based on user role.
-    Different user roles see different projects.
-    """
-    if user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager'):
-        # Admins and Managers see all projects
-        projects = Project.query.all()
-    elif user_has_role(current_user, 'Project Manager'):
-        # Project Managers see projects they manage
-        projects = Project.query.filter_by(manager_id=current_user.id).all()
-    else:  # Consultant
-        # Consultants see projects they're assigned to
-        # TODO: Implement consultant-project assignment and filtering
-        projects = []
+    Display a list of all projects with filtering options.
     
-    return render_template('projects/list.html', projects=projects)
+    GET: Display projects list with optional filters
+    """
+    # Get filter parameters
+    search_query = request.args.get('search', '')
+    status_filter = request.args.get('status_filter', '')
+    client_filter = request.args.get('client_filter', '')
+    
+    # Base query
+    query = Project.query
+    
+    # Apply filters
+    if search_query:
+        query = query.filter(Project.name.ilike(f'%{search_query}%'))
+    
+    if status_filter:
+        query = query.filter(Project.status == status_filter)
+    
+    if client_filter:
+        query = query.filter(Project.client_id == client_filter)
+    
+    # Get all projects with filters applied
+    projects = query.order_by(Project.created_at.desc()).all()
+    
+    # Get all clients for filter dropdown
+    clients = Client.query.all()
+    
+    # Get project statuses for dropdown from ProjectStatusList
+    project_statuses_list = List.query.filter_by(name='ProjectStatusList').first()
+    if project_statuses_list:
+        # Directly query the ListItem table to ensure we get the items
+        project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+    else:
+        # Try to find the list by ID 6 (known ProjectStatusList ID)
+        project_statuses_list = List.query.filter_by(id=6).first()
+        if project_statuses_list:
+            project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+        else:
+            project_statuses = []
+    
+    return render_template('projects/list.html', projects=projects, clients=clients, project_statuses=project_statuses)
 
 @projects_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -96,6 +123,40 @@ def create_project():
     managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     templates = ProjectTemplate.query.all()
     
+    # Get product groups for dropdown
+    product_groups = ProductGroup.query.all()
+    
+    # Get lists for dropdowns - Use list_id=5 for Industries
+    industries_list = List.query.filter_by(id=5).first()
+    industries = industries_list.items if industries_list else []
+    
+    # Get Profit Centers from list id=2
+    profit_centers_list = List.query.filter_by(id=2).first()
+    profit_centers = profit_centers_list.items if profit_centers_list else []
+    
+    phase_durations_list = List.query.filter_by(name='PhaseDuration').first()
+    phase_durations = phase_durations_list.items if phase_durations_list else []
+    
+    # Get project statuses for dropdown from ProjectStatusList
+    project_statuses_list = List.query.filter_by(name='ProjectStatusList').first()
+    if project_statuses_list:
+        # Directly query the ListItem table to ensure we get the items
+        project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+    else:
+        # Try to find the list by ID 6 (known ProjectStatusList ID)
+        project_statuses_list = List.query.filter_by(id=6).first()
+        if project_statuses_list:
+            project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+        else:
+            project_statuses = []
+    
+    # Debug print
+    print(f"DEBUG - Project Statuses List: {project_statuses_list}")
+    print(f"DEBUG - Project Statuses: {project_statuses}")
+    if project_statuses:
+        for status in project_statuses:
+            print(f"DEBUG - Status: {status.id} - {status.value}")
+    
     if request.method == 'POST':
         # Get form data
         name = request.form.get('name')
@@ -105,12 +166,42 @@ def create_project():
         template_id = request.form.get('template_id')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
-        status = request.form.get('status')
+        industry_id = request.form.get('industry_id')
+        profit_center_id = request.form.get('profit_center_id')
+        
+        # Get status_id from form
+        status_id = request.form.get('status_id')
+        
+        # Set default status to "Preparation" if not provided
+        if not status_id and project_statuses:
+            # Find the "Preparation" status
+            preparation_status = next((s for s in project_statuses if s.value == "Preparation"), None)
+            if preparation_status:
+                status_id = preparation_status.id
+        
+        # Get the status value from the status_id
+        status_value = None
+        if status_id:
+            status_item = ListItem.query.get(status_id)
+            if status_item:
+                status_value = status_item.value
+        
+        # If no status_value was found, default to "Preparation"
+        if not status_value:
+            status_value = "Preparation"
         
         # Validate form data
-        if not name or not client_id or not manager_id or not status:
+        if not name or not client_id or not manager_id:
             flash('All required fields must be filled.', 'danger')
             return redirect(url_for('projects.create_project'))
+        
+        # Validate dates
+        if start_date and end_date:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            if start_date_obj > end_date_obj:
+                flash('End date must be after start date.', 'danger')
+                return redirect(url_for('projects.create_project'))
         
         # Create new project
         new_project = Project(
@@ -121,7 +212,10 @@ def create_project():
             template_id=template_id if template_id else None,
             start_date=start_date if start_date else None,
             end_date=end_date if end_date else None,
-            status=status
+            status=status_value,
+            status_id=status_id,
+            industry_id=industry_id if industry_id else None,
+            profit_center_id=profit_center_id if profit_center_id else None
         )
         
         # Add project to database
@@ -136,13 +230,52 @@ def create_project():
                     new_project.products.append(product)
                 db.session.commit()
         
-        flash('Project created successfully.', 'success')
-        return redirect(url_for('projects.list_projects'))
+        # Process project groups and phases if submitted
+        if 'group_data' in request.form:
+            try:
+                group_data = json.loads(request.form.get('group_data'))
+                for group_idx, group in enumerate(group_data):
+                    # Create project group
+                    new_group = ProjectGroup(
+                        project_id=new_project.id,
+                        product_group_id=group['product_group_id'],
+                        order=group_idx
+                    )
+                    db.session.add(new_group)
+                    db.session.flush()  # Get the new group ID
+                    
+                    # Create phases for this group
+                    for phase_idx, phase in enumerate(group['phases']):
+                        new_phase = ProjectPhase(
+                            group_id=new_group.id,
+                            name=phase['name'],
+                            description=phase.get('description', ''),
+                            duration_id=phase.get('duration_id'),
+                            online=phase.get('online', False),
+                            order=phase_idx
+                        )
+                        db.session.add(new_phase)
+                
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error processing project structure: {str(e)}', 'danger')
+                return redirect(url_for('projects.edit_project', project_id=new_project.id))
+        
+        flash('Project created successfully!', 'success')
+        return redirect(url_for('projects.view_project', project_id=new_project.id))
     
-    return render_template('projects/create.html', 
-                          clients=clients, 
-                          managers=managers,
-                          templates=templates)
+    return render_template(
+        'projects/create.html', 
+        clients=clients, 
+        managers=managers, 
+        templates=templates,
+        product_groups=product_groups,
+        industries=industries,
+        profit_centers=profit_centers,
+        phase_durations=phase_durations,
+        project_statuses=project_statuses
+    )
 
 @projects_bp.route('/edit/<int:project_id>', methods=['GET', 'POST'])
 @login_required
@@ -151,13 +284,14 @@ def edit_project(project_id):
     """
     Handle project editing.
     
-    GET: Display project edit form
-    POST: Process project edit form submission
+    GET: Display project editing form
+    POST: Process project editing form submission
     """
+    # Get project
     project = Project.query.get_or_404(project_id)
     
     # Check if user has permission to edit this project
-    if user_has_role(current_user, 'Project Manager') and project.manager_id != current_user.id:
+    if not user_has_role(current_user, 'Admin') and not user_has_role(current_user, 'Manager') and project.manager_id != current_user.id:
         flash('You do not have permission to edit this project.', 'danger')
         return redirect(url_for('projects.list_projects'))
     
@@ -165,39 +299,128 @@ def edit_project(project_id):
     clients = Client.query.all()
     managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
     
+    # Get product groups for dropdown
+    product_groups = ProductGroup.query.all()
+    
+    # Get lists for dropdowns
+    industries_list = List.query.filter_by(id=5).first()
+    industries = industries_list.items if industries_list else []
+    
+    # Get Profit Centers from list id=2
+    profit_centers_list = List.query.filter_by(id=2).first()
+    profit_centers = profit_centers_list.items if profit_centers_list else []
+    
+    phase_durations_list = List.query.filter_by(name='PhaseDuration').first()
+    phase_durations = phase_durations_list.items if phase_durations_list else []
+    
+    # Get project statuses for dropdown from ProjectStatusList
+    project_statuses_list = List.query.filter_by(name='ProjectStatusList').first()
+    if project_statuses_list:
+        # Directly query the ListItem table to ensure we get the items
+        project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+    else:
+        # Try to find the list by ID 6 (known ProjectStatusList ID)
+        project_statuses_list = List.query.filter_by(id=6).first()
+        if project_statuses_list:
+            project_statuses = ListItem.query.filter_by(list_id=project_statuses_list.id).order_by(ListItem.order).all()
+        else:
+            project_statuses = []
+    
     if request.method == 'POST':
         # Get form data
-        name = request.form.get('name')
-        description = request.form.get('description')
-        client_id = request.form.get('client_id')
-        manager_id = request.form.get('manager_id')
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        status = request.form.get('status')
+        project.name = request.form.get('name')
+        project.description = request.form.get('description')
+        project.client_id = request.form.get('client_id')
+        project.manager_id = request.form.get('manager_id')
+        project.start_date = request.form.get('start_date') if request.form.get('start_date') else None
+        project.end_date = request.form.get('end_date') if request.form.get('end_date') else None
+        project.industry_id = request.form.get('industry_id') if request.form.get('industry_id') else None
+        project.profit_center_id = request.form.get('profit_center_id') if request.form.get('profit_center_id') else None
+        
+        # Get status_id from form
+        status_id = request.form.get('status_id')
+        
+        # Update status_id and status value
+        if status_id:
+            project.status_id = status_id
+            # Get the status value from the status_id
+            status_item = ListItem.query.get(status_id)
+            if status_item:
+                project.status = status_item.value
+        # Keep existing status or set default if none
+        elif not project.status:
+            # Find the "Preparation" status
+            preparation_status = next((s for s in project_statuses if s.value == "Preparation"), None)
+            if preparation_status:
+                project.status_id = preparation_status.id
+                project.status = "Preparation"
+            else:
+                project.status = "Preparation"
         
         # Validate form data
-        if not name or not client_id or not manager_id or not status:
+        if not project.name or not project.client_id or not project.manager_id:
             flash('All required fields must be filled.', 'danger')
             return redirect(url_for('projects.edit_project', project_id=project_id))
         
-        # Update project
-        project.name = name
-        project.description = description
-        project.client_id = client_id
-        project.manager_id = manager_id
-        project.start_date = start_date if start_date else None
-        project.end_date = end_date if end_date else None
-        project.status = status
+        # Validate dates
+        if project.start_date and project.end_date:
+            if project.start_date > project.end_date:
+                flash('End date must be after start date.', 'danger')
+                return redirect(url_for('projects.edit_project', project_id=project_id))
         
+        # Process project groups and phases if submitted
+        if 'group_data' in request.form:
+            try:
+                # Delete existing groups and phases
+                for group in project.groups:
+                    db.session.delete(group)  # This will cascade delete phases
+                db.session.flush()
+                
+                # Add new groups and phases
+                group_data = json.loads(request.form.get('group_data'))
+                for group_idx, group in enumerate(group_data):
+                    # Create project group
+                    new_group = ProjectGroup(
+                        project_id=project.id,
+                        product_group_id=group['product_group_id'],
+                        order=group_idx
+                    )
+                    db.session.add(new_group)
+                    db.session.flush()  # Get the new group ID
+                    
+                    # Create phases for this group
+                    for phase_idx, phase in enumerate(group['phases']):
+                        new_phase = ProjectPhase(
+                            group_id=new_group.id,
+                            name=phase['name'],
+                            description=phase.get('description', ''),
+                            duration_id=phase.get('duration_id'),
+                            online=phase.get('online', False),
+                            order=phase_idx
+                        )
+                        db.session.add(new_phase)
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error processing project structure: {str(e)}', 'danger')
+                return redirect(url_for('projects.edit_project', project_id=project_id))
+        
+        # Save changes
         db.session.commit()
         
-        flash('Project updated successfully.', 'success')
-        return redirect(url_for('projects.list_projects'))
+        flash('Project updated successfully!', 'success')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
-    return render_template('projects/edit.html', 
-                          project=project,
-                          clients=clients, 
-                          managers=managers)
+    return render_template(
+        'projects/edit.html', 
+        project=project,
+        clients=clients, 
+        managers=managers,
+        product_groups=product_groups,
+        industries=industries,
+        profit_centers=profit_centers,
+        phase_durations=phase_durations,
+        project_statuses=project_statuses
+    )
 
 @projects_bp.route('/delete/<int:project_id>', methods=['POST'])
 @login_required
@@ -219,13 +442,17 @@ def view_project(project_id):
     project = Project.query.get_or_404(project_id)
     
     # Check if user has permission to view this project
-    if user_has_role(current_user, 'Project Manager') and project.manager_id != current_user.id:
+    if not user_has_role(current_user, 'Admin') and not user_has_role(current_user, 'Manager') and project.manager_id != current_user.id:
         # TODO: Check if consultant is assigned to this project
         if user_has_role(current_user, 'Consultant'):
             flash('You do not have permission to view this project.', 'danger')
             return redirect(url_for('projects.list_projects'))
     
-    return render_template('projects/view.html', project=project)
+    # Get phase durations for reference
+    phase_durations_list = List.query.filter_by(name='PhaseDuration').first()
+    phase_durations = {item.id: item.value for item in phase_durations_list.items} if phase_durations_list else {}
+    
+    return render_template('projects/view.html', project=project, phase_durations=phase_durations)
 
 # Project Template Routes
 
@@ -411,3 +638,106 @@ def view_template(template_id):
 # TODO: Add routes for project tasks
 # TODO: Add routes for consultant assignment to projects
 # TODO: Add routes for project phases
+
+@projects_bp.route('/api/product-groups/<int:group_id>/elements')
+@login_required
+def get_product_group_elements(group_id):
+    """
+    API endpoint to get product elements for a product group.
+    Returns a JSON object with:
+    - elements: Array of elements with label, activity, and other properties
+    - group: Information about the product group
+    - count: Total number of elements
+    """
+    try:
+        # Get product group
+        product_group = ProductGroup.query.get_or_404(group_id)
+        
+        # Get elements
+        elements = product_group.elements
+        
+        # Format elements for JSON response
+        elements_data = [
+            {
+                'id': element.id,
+                'label': element.label,
+                'activity': element.activity,
+                'group_duration_id': product_group.duration_id
+            }
+            for element in elements
+        ]
+        
+        # Include group information
+        response_data = {
+            'elements': elements_data,
+            'group': {
+                'id': product_group.id,
+                'name': product_group.name,
+                'description': product_group.description,
+                'duration_id': product_group.duration_id
+            },
+            'count': len(elements_data),
+            'success': True
+        }
+        
+        return jsonify(response_data)
+    except Exception as e:
+        # Return error response
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Failed to retrieve product group elements'
+        }), 500
+
+@projects_bp.route('/debug-create')
+@login_required
+def debug_create():
+    """Debug route to check what's being passed to the template"""
+    # Get clients and managers for dropdown
+    clients = Client.query.all()
+    managers = User.query.join(User.roles).filter(Role.name == 'Project Manager').all()
+    
+    # Get product groups for dropdown
+    product_groups = ProductGroup.query.all()
+    
+    # Get lists for dropdowns
+    industries_list = List.query.filter_by(id=5).first()
+    industries = industries_list.items if industries_list else []
+    print(f"DEBUG - Industries List: {industries_list}")
+    print(f"DEBUG - Industries Count: {len(industries)}")
+    
+    # Get Profit Centers from list id=2
+    profit_centers_list = List.query.filter_by(id=2).first()
+    profit_centers = profit_centers_list.items if profit_centers_list else []
+    print(f"DEBUG - Profit Centers List: {profit_centers_list}")
+    print(f"DEBUG - Profit Centers Count: {len(profit_centers)}")
+    
+    phase_durations_list = List.query.filter_by(name='PhaseDuration').first()
+    phase_durations = phase_durations_list.items if phase_durations_list else []
+    print(f"DEBUG - Phase Durations List: {phase_durations_list}")
+    print(f"DEBUG - Phase Durations Count: {len(phase_durations)}")
+    
+    # Get project statuses for dropdown from ProjectStatusList
+    project_statuses_list = List.query.filter_by(name='ProjectStatusList').first()
+    print(f"DEBUG - Project Statuses List: {project_statuses_list}")
+    
+    # Try both ways to get items
+    project_statuses_1 = project_statuses_list.items if project_statuses_list else []
+    print(f"DEBUG - Project Statuses Count (using .items): {len(project_statuses_1)}")
+    
+    project_statuses_2 = ListItem.query.filter_by(list_id=project_statuses_list.id).all() if project_statuses_list else []
+    print(f"DEBUG - Project Statuses Count (using direct query): {len(project_statuses_2)}")
+    
+    # Use the direct query method
+    project_statuses = project_statuses_2
+    
+    # Debug output
+    debug_info = {
+        'project_statuses_list': str(project_statuses_list),
+        'project_statuses': [{'id': s.id, 'value': s.value} for s in project_statuses],
+        'industries': [{'id': i.id, 'value': i.value} for i in industries],
+        'profit_centers': [{'id': p.id, 'value': p.value} for p in profit_centers],
+        'phase_durations': [{'id': d.id, 'value': d.value} for d in phase_durations],
+    }
+    
+    return jsonify(debug_info)

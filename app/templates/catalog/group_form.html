@@ -37,6 +37,17 @@
                         <div class="form-text">Optional description of what this group represents</div>
                     </div>
                     
+                    <div class="mb-3">
+                        <label for="duration_id" class="form-label">Default Phase Duration</label>
+                        <select class="form-control" id="duration_id" name="duration_id">
+                            <option value="">Select a default duration</option>
+                            {% for duration in phase_durations %}
+                            <option value="{{ duration.id }}" {% if group and group.duration_id == duration.id %}selected{% endif %}>{{ duration.value }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Default duration to use for phases created from this group's elements</div>
+                    </div>
+                    
                     <!-- Product Elements Section -->
                     <div class="mb-4">
                         <label class="form-label">Product Elements</label>

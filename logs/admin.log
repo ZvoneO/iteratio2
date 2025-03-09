@@ -1,2 +1,297 @@
 2025-03-08 07:32:23,201 - admin - INFO - Delete user request: user_id=5, by=admin
 2025-03-08 07:32:23,207 - admin - INFO - User consultant deleted successfully.
+2025-03-08 08:48:23,604 - admin - INFO - User update/create request: {'username': 'testconsultant', 'email': 'test@test.com', 'first_name': 'Test', 'last_name': 'konzo', 'role_names': ['Project Manager', 'Consultant'], 'is_active': True, 'user_id': 4, 'is_ajax': True}
+2025-03-08 08:48:23,609 - admin - INFO - Updating existing user: 4 - testconsultant
+2025-03-08 08:48:23,610 - admin - INFO - User updated successfully.
+2025-03-08 08:48:24,587 - admin - INFO - User update/create request: {'username': 'testconsultant', 'email': 'test@test.com', 'first_name': 'Test', 'last_name': 'konzo', 'role_names': ['Project Manager', 'Consultant'], 'is_active': True, 'user_id': 4, 'is_ajax': True}
+2025-03-08 08:48:24,590 - admin - INFO - Updating existing user: 4 - testconsultant
+2025-03-08 08:48:24,592 - admin - INFO - User updated successfully.
+2025-03-08 10:57:51,361 - admin - INFO - Consultant update request for ID 5
+2025-03-08 10:57:51,374 - admin - INFO - Consultant expertise update for ID 5, product_element 10
+2025-03-08 10:57:51,375 - admin - INFO - Consultant expertise update for ID 5, product_element 15
+2025-03-08 10:57:51,375 - admin - INFO - Consultant expertise update for ID 5, product_group 1
+2025-03-08 10:57:51,375 - admin - INFO - Consultant expertise update for ID 5, product_element 12
+2025-03-08 10:57:51,377 - admin - ERROR - Error updating expertise for consultant: 'ProductElement' object has no attribute 'name'
+Traceback (most recent call last):
+  File "/home/zvone/develop/iteratio2/app/routes/consultants.py", line 447, in update_consultant_expertise
+    item_name = element.name
+                ^^^^^^^^^^^^
+AttributeError: 'ProductElement' object has no attribute 'name'
+
+2025-03-08 10:57:51,379 - admin - ERROR - Error updating expertise for consultant: 'ProductElement' object has no attribute 'name'
+Traceback (most recent call last):
+  File "/home/zvone/develop/iteratio2/app/routes/consultants.py", line 447, in update_consultant_expertise
+    item_name = element.name
+                ^^^^^^^^^^^^
+AttributeError: 'ProductElement' object has no attribute 'name'
+
+2025-03-08 10:57:51,380 - admin - ERROR - Error updating expertise for consultant: 'ProductElement' object has no attribute 'name'
+Traceback (most recent call last):
+  File "/home/zvone/develop/iteratio2/app/routes/consultants.py", line 447, in update_consultant_expertise
+    item_name = element.name
+                ^^^^^^^^^^^^
+AttributeError: 'ProductElement' object has no attribute 'name'
+
+2025-03-08 10:57:51,380 - admin - INFO - Expertise updated for consultant 5
+2025-03-08 11:03:41,095 - admin - INFO - Consultant update request for ID 6
+2025-03-08 11:03:41,098 - admin - INFO - Consultant 6 updated successfully
+2025-03-08 11:03:41,103 - admin - INFO - Consultant expertise update for ID 6, product_group 2
+2025-03-08 11:03:41,104 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:10:33,771 - admin - INFO - Consultant expertise update for ID None, product_group 1
+2025-03-08 11:10:33,771 - admin - ERROR - Missing required parameters
+2025-03-08 11:22:25,833 - admin - INFO - Consultant expertise update for ID None, product_group 2
+2025-03-08 11:22:25,833 - admin - ERROR - Missing required parameters
+2025-03-08 11:22:29,193 - admin - INFO - Consultant update request for ID 6
+2025-03-08 11:31:06,200 - admin - INFO - Consultant update request for ID 2
+2025-03-08 11:31:06,213 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 11:31:06,214 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 11:31:08,624 - admin - INFO - Consultant update request for ID 2
+2025-03-08 11:31:08,633 - admin - INFO - Consultant expertise update for ID 2, product_element 13
+2025-03-08 11:31:08,634 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 11:31:08,635 - admin - ERROR - Error updating expertise for consultant: 'ProductElement' object has no attribute 'name'
+Traceback (most recent call last):
+  File "/home/zvone/develop/iteratio2/app/routes/consultants.py", line 447, in update_consultant_expertise
+    item_name = element.name
+                ^^^^^^^^^^^^
+AttributeError: 'ProductElement' object has no attribute 'name'
+
+2025-03-08 11:31:08,636 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 11:32:26,327 - admin - INFO - Consultant update request for ID 6
+2025-03-08 11:32:26,345 - admin - INFO - Consultant expertise update for ID 6, product_group 2
+2025-03-08 11:32:26,345 - admin - INFO - Consultant expertise update for ID 6, product_element 5
+2025-03-08 11:32:26,346 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:32:26,347 - admin - ERROR - Error updating expertise for consultant: 'ProductElement' object has no attribute 'name'
+Traceback (most recent call last):
+  File "/home/zvone/develop/iteratio2/app/routes/consultants.py", line 447, in update_consultant_expertise
+    item_name = element.name
+                ^^^^^^^^^^^^
+AttributeError: 'ProductElement' object has no attribute 'name'
+
+2025-03-08 11:47:54,800 - admin - INFO - Consultant update request for ID 3
+2025-03-08 11:47:54,806 - admin - INFO - Consultant expertise update for ID 3, product_element 2
+2025-03-08 11:47:54,808 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 11:47:54,809 - admin - INFO - Consultant expertise update for ID 3, product_group 1
+2025-03-08 11:47:54,810 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 11:48:06,038 - admin - INFO - Consultant update request for ID 5
+2025-03-08 11:48:06,045 - admin - INFO - Consultant expertise update for ID 5, product_element 13
+2025-03-08 11:48:06,046 - admin - INFO - Consultant expertise update for ID 5, product_group 1
+2025-03-08 11:48:06,047 - admin - INFO - Expertise updated for consultant 5
+2025-03-08 11:48:06,048 - admin - INFO - Expertise updated for consultant 5
+2025-03-08 11:48:17,413 - admin - INFO - Consultant update request for ID 6
+2025-03-08 11:48:17,421 - admin - INFO - Consultant expertise update for ID 6, product_element 14
+2025-03-08 11:48:17,422 - admin - INFO - Consultant expertise update for ID 6, product_group 2
+2025-03-08 11:48:17,424 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:48:17,424 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:48:49,733 - admin - INFO - Consultant update request for ID 6
+2025-03-08 11:48:49,748 - admin - INFO - Consultant expertise update for ID 6, product_group 2
+2025-03-08 11:48:49,748 - admin - INFO - Consultant expertise update for ID 6, product_element 9
+2025-03-08 11:48:49,749 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:48:49,750 - admin - INFO - Expertise updated for consultant 6
+2025-03-08 11:49:44,660 - admin - INFO - Consultant expertise update for ID None, product_group 1
+2025-03-08 11:49:44,660 - admin - ERROR - Missing required parameters
+2025-03-08 11:49:59,420 - admin - INFO - Consultant expertise update for ID None, product_group 1
+2025-03-08 11:49:59,420 - admin - ERROR - Missing required parameters
+2025-03-08 11:50:03,343 - admin - INFO - Consultant update request for ID 3
+2025-03-08 11:51:36,398 - admin - INFO - Consultant update request for ID 3
+2025-03-08 11:51:36,415 - admin - INFO - Consultant expertise update for ID 3, product_element 1
+2025-03-08 11:51:36,415 - admin - INFO - Consultant expertise update for ID 3, product_group 1
+2025-03-08 11:51:36,418 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 11:51:36,418 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 12:02:42,243 - admin - INFO - Consultant update request for ID 3
+2025-03-08 12:02:42,248 - admin - INFO - Consultant expertise update for ID 3, product_group 1
+2025-03-08 12:02:42,249 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 3
+2025-03-08 12:02:42,250 - admin - INFO - Consultant expertise update for ID 3, product_element 2
+2025-03-08 12:02:42,250 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 12:02:42,252 - admin - INFO - Setting expertise for ALP I - 2 (ALP I) (ID: 2) to rating 4
+2025-03-08 12:02:42,252 - admin - INFO - Expertise updated for consultant 3
+2025-03-08 12:07:00,036 - admin - INFO - Consultant update request for ID 7
+2025-03-08 12:07:00,053 - admin - INFO - Consultant expertise update for ID 7, product_element 14
+2025-03-08 12:07:00,053 - admin - INFO - Consultant expertise update for ID 7, product_group 1
+2025-03-08 12:07:00,055 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 4
+2025-03-08 12:07:00,055 - admin - INFO - Setting expertise for ALP II - 6 (ALP II) (ID: 14) to rating 2
+2025-03-08 12:07:00,055 - admin - INFO - Expertise updated for consultant 7
+2025-03-08 12:07:00,055 - admin - INFO - Expertise updated for consultant 7
+2025-03-08 12:08:41,464 - admin - INFO - Consultant update request for ID 2
+2025-03-08 12:08:41,469 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 12:08:41,470 - admin - INFO - Consultant expertise update for ID 2, product_element 3
+2025-03-08 12:08:41,470 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:08:41,471 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 12:08:41,471 - admin - INFO - Setting expertise for ALP I - 3 (ALP I) (ID: 3) to rating 4
+2025-03-08 12:08:41,471 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 12:09:25,405 - admin - INFO - Consultant update request for ID 2
+2025-03-08 12:09:25,419 - admin - INFO - Consultant expertise update for ID 2, product_element 2
+2025-03-08 12:09:25,420 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 12:09:25,421 - admin - INFO - Setting expertise for ALP I - 2 (ALP I) (ID: 2) to rating 4
+2025-03-08 12:09:25,421 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 12:09:25,422 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:09:25,422 - admin - INFO - Expertise updated for consultant 2
+2025-03-08 12:10:49,130 - admin - INFO - Consultant update request for ID 7
+2025-03-08 12:10:49,135 - admin - INFO - Consultant expertise update for ID 7, product_element 14
+2025-03-08 12:10:49,136 - admin - INFO - Consultant expertise update for ID 7, product_element 1
+2025-03-08 12:10:49,137 - admin - INFO - Setting expertise for ALP II - 6 (ALP II) (ID: 14) to rating 2
+2025-03-08 12:10:49,137 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 3
+2025-03-08 12:10:49,138 - admin - INFO - Expertise updated for consultant 7
+2025-03-08 12:10:49,138 - admin - INFO - Expertise updated for consultant 7
+2025-03-08 12:15:30,928 - admin - INFO - Consultant update request for ID 3
+2025-03-08 12:15:30,945 - admin - INFO - Consultant expertise update for ID 3, product_element 1
+2025-03-08 12:15:30,946 - admin - INFO - Consultant expertise update for ID 3, product_group 1
+2025-03-08 12:15:30,946 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 5
+2025-03-08 12:15:30,947 - admin - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-08 12:15:30,947 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 3
+2025-03-08 12:15:30,948 - admin - INFO - Expertise set to 3 stars for ALP I
+2025-03-08 12:15:47,024 - admin - INFO - Consultant update request for ID 2
+2025-03-08 12:15:47,040 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 12:15:47,041 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 12:15:47,042 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:15:47,042 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 5
+2025-03-08 12:15:47,042 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:15:47,043 - admin - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-08 12:18:54,993 - admin - INFO - Consultant update request for ID 8
+2025-03-08 12:18:55,006 - admin - INFO - Consultant expertise update for ID 8, product_group 1
+2025-03-08 12:18:55,008 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:18:55,010 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:19:16,094 - admin - INFO - Consultant update request for ID 8
+2025-03-08 12:19:16,108 - admin - INFO - Consultant expertise update for ID 8, product_group 2
+2025-03-08 12:19:16,108 - admin - INFO - Consultant expertise update for ID 8, product_group 1
+2025-03-08 12:19:16,109 - admin - INFO - Setting expertise for ALP II (ID: 2) to rating 5
+2025-03-08 12:19:16,109 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:19:16,109 - admin - INFO - Expertise set to 5 stars for ALP II
+2025-03-08 12:19:16,110 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:19:35,514 - admin - INFO - Consultant update request for ID 8
+2025-03-08 12:19:35,523 - admin - INFO - Consultant expertise update for ID 8, product_group 1
+2025-03-08 12:19:35,524 - admin - INFO - Consultant expertise update for ID 8, product_element 9
+2025-03-08 12:19:35,525 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:19:35,525 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:19:35,526 - admin - INFO - Consultant expertise update for ID 8, product_group 2
+2025-03-08 12:19:35,527 - admin - INFO - Setting expertise for ALP II - 1 (ALP II) (ID: 9) to rating 5
+2025-03-08 12:19:35,527 - admin - INFO - Expertise set to 5 stars for ALP II - 1 (ALP II)
+2025-03-08 12:19:35,528 - admin - INFO - Setting expertise for ALP II (ID: 2) to rating 5
+2025-03-08 12:19:35,528 - admin - INFO - Expertise set to 5 stars for ALP II
+2025-03-08 12:20:40,823 - admin - INFO - Consultant update request for ID 8
+2025-03-08 12:20:40,831 - admin - INFO - Consultant expertise update for ID 8, product_group 1
+2025-03-08 12:20:40,832 - admin - INFO - Consultant expertise update for ID 8, product_element 9
+2025-03-08 12:20:40,833 - admin - INFO - Consultant expertise update for ID 8, product_element 10
+2025-03-08 12:20:40,833 - admin - INFO - Consultant expertise update for ID 8, product_group 2
+2025-03-08 12:20:40,834 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:20:40,835 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:20:40,836 - admin - INFO - Setting expertise for ALP II - 1 (ALP II) (ID: 9) to rating 5
+2025-03-08 12:20:40,836 - admin - INFO - Expertise set to 5 stars for ALP II - 1 (ALP II)
+2025-03-08 12:20:40,837 - admin - INFO - Setting expertise for ALP II (ID: 2) to rating 5
+2025-03-08 12:20:40,837 - admin - INFO - Expertise set to 5 stars for ALP II
+2025-03-08 12:20:40,837 - admin - INFO - Setting expertise for ALP II - 2 (ALP II) (ID: 10) to rating 5
+2025-03-08 12:20:40,838 - admin - INFO - Expertise set to 5 stars for ALP II - 2 (ALP II)
+2025-03-08 12:20:59,010 - admin - INFO - Consultant update request for ID 8
+2025-03-08 12:20:59,026 - admin - INFO - Consultant expertise update for ID 8, product_element 10
+2025-03-08 12:20:59,026 - admin - INFO - Consultant expertise update for ID 8, product_group 2
+2025-03-08 12:20:59,026 - admin - INFO - Consultant expertise update for ID 8, product_group 1
+2025-03-08 12:20:59,026 - admin - INFO - Consultant expertise update for ID 8, product_element 9
+2025-03-08 12:20:59,028 - admin - INFO - Setting expertise for ALP II - 2 (ALP II) (ID: 10) to rating 1
+2025-03-08 12:20:59,029 - admin - INFO - Expertise set to 1 stars for ALP II - 2 (ALP II)
+2025-03-08 12:20:59,030 - admin - INFO - Setting expertise for ALP II (ID: 2) to rating 5
+2025-03-08 12:20:59,030 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:20:59,030 - admin - INFO - Setting expertise for ALP II - 1 (ALP II) (ID: 9) to rating 5
+2025-03-08 12:20:59,030 - admin - INFO - Expertise set to 5 stars for ALP II
+2025-03-08 12:20:59,030 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 12:20:59,030 - admin - INFO - Expertise set to 5 stars for ALP II - 1 (ALP II)
+2025-03-08 12:29:49,213 - admin - INFO - Consultant update request for ID 6
+2025-03-08 12:29:49,231 - admin - INFO - Consultant expertise update for ID 6, product_group 2
+2025-03-08 12:29:49,232 - admin - INFO - Consultant expertise update for ID 6, product_group 1
+2025-03-08 12:29:49,233 - admin - INFO - Setting expertise for ALP II (ID: 2) to rating 3
+2025-03-08 12:29:49,233 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 12:29:49,233 - admin - INFO - Expertise set to 3 stars for ALP II
+2025-03-08 12:29:49,234 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 13:52:12,300 - admin - INFO - Consultant update request for ID 2
+2025-03-08 13:52:12,316 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 13:52:12,317 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 13:52:12,318 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 13:52:12,318 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 13:52:12,319 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 4
+2025-03-08 13:52:12,319 - admin - INFO - Expertise set to 4 stars for ALP I - 1 (ALP I)
+2025-03-08 13:55:00,326 - admin - INFO - Consultant update request for ID 2
+2025-03-08 13:55:00,334 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 13:55:00,334 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 13:55:00,335 - admin - INFO - Consultant expertise update for ID 2, product_element 11
+2025-03-08 13:55:00,336 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 4
+2025-03-08 13:55:00,336 - admin - INFO - Expertise set to 4 stars for ALP I - 1 (ALP I)
+2025-03-08 13:55:00,337 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 13:55:00,337 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 13:55:00,337 - admin - INFO - Setting expertise for ALP II - 3 (ALP II) (ID: 11) to rating 5
+2025-03-08 13:55:00,338 - admin - INFO - Expertise set to 5 stars for ALP II - 3 (ALP II)
+2025-03-08 15:18:48,148 - admin - INFO - Consultant update request for ID 2
+2025-03-08 15:18:48,154 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 15:18:48,155 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 15:18:48,155 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 15:18:48,159 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 15:18:48,160 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 4
+2025-03-08 15:18:48,161 - admin - INFO - Expertise set to 4 stars for ALP I - 1 (ALP I)
+2025-03-08 15:20:32,186 - admin - INFO - Consultant update request for ID 2
+2025-03-08 15:20:32,202 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 15:20:32,203 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 15:20:32,203 - admin - INFO - Consultant expertise update for ID 2, product_element 2
+2025-03-08 15:20:32,204 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 15:20:32,205 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 4
+2025-03-08 15:20:32,205 - admin - INFO - Setting expertise for ALP I - 2 (ALP I) (ID: 2) to rating 1
+2025-03-08 15:20:32,207 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 15:20:32,209 - admin - INFO - Expertise set to 1 stars for ALP I - 2 (ALP I)
+2025-03-08 15:20:32,215 - admin - INFO - Expertise set to 4 stars for ALP I - 1 (ALP I)
+2025-03-08 15:21:14,056 - admin - INFO - Consultant update request for ID 2
+2025-03-08 15:21:14,070 - admin - INFO - Consultant expertise update for ID 2, product_element 2
+2025-03-08 15:21:14,070 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 15:21:14,071 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 15:21:14,073 - admin - INFO - Consultant expertise update for ID 2, product_element 3
+2025-03-08 15:21:14,073 - admin - INFO - Setting expertise for ALP I - 2 (ALP I) (ID: 2) to rating 1
+2025-03-08 15:21:14,074 - admin - INFO - Setting expertise for ALP I - 1 (ALP I) (ID: 1) to rating 4
+2025-03-08 15:21:14,075 - admin - INFO - Setting expertise for ALP I (ID: 1) to rating 5
+2025-03-08 15:21:14,077 - admin - INFO - Expertise set to 1 stars for ALP I - 2 (ALP I)
+2025-03-08 15:21:14,078 - admin - INFO - Setting expertise for ALP I - 3 (ALP I) (ID: 3) to rating 5
+2025-03-08 15:21:14,079 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 15:21:14,081 - admin - INFO - Expertise set to 5 stars for ALP I - 3 (ALP I)
+2025-03-08 15:21:14,084 - admin - INFO - Expertise set to 4 stars for ALP I - 1 (ALP I)
+2025-03-08 16:43:16,602 - admin - INFO - Consultant update request for ID 2
+2025-03-08 16:43:16,618 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 16:43:16,620 - admin - INFO - Creating new expertise for ALP I (ID: 1) with rating 5
+2025-03-08 16:43:16,623 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 16:43:41,017 - admin - INFO - Consultant update request for ID 3
+2025-03-08 16:43:41,022 - admin - INFO - Consultant expertise update for ID 3, product_element 1
+2025-03-08 16:43:41,024 - admin - INFO - Creating new expertise for ALP I - 1 (ALP I) (ID: 1) with rating 5
+2025-03-08 16:43:41,027 - admin - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-08 16:45:20,068 - admin - INFO - Consultant update request for ID 2
+2025-03-08 16:45:20,084 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 16:45:20,085 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 16:45:20,086 - admin - INFO - Creating new expertise for ALP I - 1 (ALP I) (ID: 1) with rating 5
+2025-03-08 16:45:20,088 - admin - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-08 16:45:20,090 - admin - INFO - Updating expertise for ALP I (ID: 1) to rating 5
+2025-03-08 16:45:20,092 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 16:46:31,853 - admin - INFO - Consultant update request for ID 6
+2025-03-08 16:46:31,857 - admin - INFO - Consultant expertise update for ID 6, product_group 1
+2025-03-08 16:46:31,858 - admin - INFO - Creating new expertise for ALP I (ID: 1) with rating 5
+2025-03-08 16:46:31,861 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 16:48:58,309 - admin - INFO - Consultant update request for ID 7
+2025-03-08 16:48:58,325 - admin - INFO - Consultant expertise update for ID 7, product_group 1
+2025-03-08 16:48:58,326 - admin - INFO - Creating new expertise for ALP I (ID: 1) with rating 5
+2025-03-08 16:48:58,329 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 16:49:24,885 - admin - INFO - Consultant update request for ID 7
+2025-03-08 16:49:24,897 - admin - INFO - Consultant expertise update for ID 7, product_group 1
+2025-03-08 16:49:24,897 - admin - INFO - Consultant expertise update for ID 7, product_element 12
+2025-03-08 16:49:24,899 - admin - INFO - Updating expertise for ALP I (ID: 1) to rating 5
+2025-03-08 16:49:24,900 - admin - INFO - Creating new expertise for ALP II - 4 (ALP II) (ID: 12) with rating 5
+2025-03-08 16:49:24,902 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 16:49:24,905 - admin - INFO - Expertise set to 5 stars for ALP II - 4 (ALP II)
+2025-03-08 17:29:50,882 - admin - INFO - Consultant update request for ID 2
+2025-03-08 17:29:50,890 - admin - INFO - Consultant expertise update for ID 2, product_element 2
+2025-03-08 17:29:50,892 - admin - INFO - Consultant expertise update for ID 2, product_group 1
+2025-03-08 17:29:50,893 - admin - INFO - Consultant expertise update for ID 2, product_element 1
+2025-03-08 17:29:50,894 - admin - INFO - Creating new expertise for ALP I - 2 (ALP I) (ID: 2) with rating 5
+2025-03-08 17:29:50,897 - admin - INFO - Updating expertise for ALP I (ID: 1) to rating 5
+2025-03-08 17:29:50,899 - admin - INFO - Expertise set to 5 stars for ALP I - 2 (ALP I)
+2025-03-08 17:29:50,901 - admin - INFO - Updating expertise for ALP I - 1 (ALP I) (ID: 1) to rating 5
+2025-03-08 17:29:50,902 - admin - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-08 17:29:50,908 - admin - INFO - Expertise set to 5 stars for ALP I
+2025-03-08 17:30:34,266 - admin - INFO - Consultant update request for ID 5
+2025-03-08 17:30:34,272 - admin - INFO - Consultant expertise update for ID 5, product_element 14
+2025-03-08 17:30:34,273 - admin - INFO - Creating new expertise for ALP II - 6 (ALP II) (ID: 14) with rating 5
+2025-03-08 17:30:34,276 - admin - INFO - Expertise set to 5 stars for ALP II - 6 (ALP II)
+2025-03-08 17:30:46,168 - admin - INFO - Consultant update request for ID 8
+2025-03-08 17:30:46,179 - admin - INFO - Consultant expertise update for ID 8, product_element 12
+2025-03-08 17:30:46,180 - admin - INFO - Creating new expertise for ALP II - 4 (ALP II) (ID: 12) with rating 5
+2025-03-08 17:30:46,182 - admin - INFO - Expertise set to 5 stars for ALP II - 4 (ALP II)

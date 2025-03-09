@@ -2,6 +2,26 @@
 
 {% block title %}Projects - Resource Planning Application{% endblock %}
 
+{% block extra_css %}
+<style>
+    .client-result {
+        transition: background-color 0.2s;
+    }
+    .client-result:hover {
+        background-color: #f8f9fa;
+    }
+    .client-result:last-child {
+        border-bottom: none !important;
+    }
+    .dropdown-results {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
@@ -11,7 +31,7 @@
         <p class="lead">Manage your projects</p>
     </div>
     <div class="col-auto">
-        {% if current_user.role in ['Admin', 'Manager', 'Project Manager'] %}
+        {% if current_user.is_authenticated and (current_user.roles|selectattr('name', 'in', ['Admin', 'Manager', 'Project Manager'])|list or current_user.username == 'admin') %}
         <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Project
         </a>
@@ -35,21 +55,18 @@
                     <label for="status_filter" class="form-label">Status</label>
                     <select class="form-select" id="status_filter" name="status_filter">
                         <option value="">All Statuses</option>
-                        <option value="Planning" {% if request.args.get('status_filter') == 'Planning' %}selected{% endif %}>Planning</option>
-                        <option value="In Progress" {% if request.args.get('status_filter') == 'In Progress' %}selected{% endif %}>In Progress</option>
-                        <option value="Completed" {% if request.args.get('status_filter') == 'Completed' %}selected{% endif %}>Completed</option>
-                        <option value="On Hold" {% if request.args.get('status_filter') == 'On Hold' %}selected{% endif %}>On Hold</option>
-                        <option value="Cancelled" {% if request.args.get('status_filter') == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                        {% for status in project_statuses %}
+                        <option value="{{ status.value }}" {% if request.args.get('status_filter') == status.value %}selected{% endif %}>{{ status.value }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="client_filter" class="form-label">Client</label>
-                    <select class="form-select" id="client_filter" name="client_filter">
-                        <option value="">All Clients</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}" {% if request.args.get('client_filter')|int == client.id %}selected{% endif %}>{{ client.name }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="client_search" placeholder="Search for a client..." autocomplete="off" value="{{ clients|selectattr('id', 'eq', request.args.get('client_filter')|int)|map(attribute='name')|first|default('') }}">
+                        <div id="client_results" class="dropdown-results position-absolute w-100 mt-1 shadow-sm" style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto; background-color: white; border: 1px solid #dee2e6; border-radius: 0.25rem;"></div>
+                        <input type="hidden" id="client_filter" name="client_filter" value="{{ request.args.get('client_filter', '') }}">
+                    </div>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
@@ -229,4 +246,120 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client search handling
+        const clientSearchInput = document.getElementById('client_search');
+        const clientResultsDiv = document.getElementById('client_results');
+        const clientFilterInput = document.getElementById('client_filter');
+        
+        let searchTimeout;
+        let selectedClient = null;
+        
+        // Initialize with the current client if any
+        if (clientFilterInput.value && clientSearchInput.value) {
+            selectedClient = {
+                id: clientFilterInput.value,
+                name: clientSearchInput.value
+            };
+        }
+        
+        // Function to search for clients
+        function searchClients(query) {
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to prevent too many requests
+            searchTimeout = setTimeout(() => {
+                if (query.length < 2) {
+                    clientResultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Make AJAX request to search for clients
+                fetch(`/clients/search?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear previous results
+                        clientResultsDiv.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            clientResultsDiv.style.display = 'none';
+                            return;
+                        }
+                        
+                        // Add results to dropdown
+                        data.forEach(client => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'p-2 border-bottom client-result';
+                            resultItem.style.cursor = 'pointer';
+                            resultItem.innerHTML = `<strong>${client.name}</strong>`;
+                            if (client.city || client.country) {
+                                resultItem.innerHTML += `<br><small>${client.city}${client.city && client.country ? ', ' : ''}${client.country}</small>`;
+                            }
+                            
+                            // Add click event to select client
+                            resultItem.addEventListener('click', () => {
+                                selectClient(client);
+                            });
+                            
+                            clientResultsDiv.appendChild(resultItem);
+                        });
+                        
+                        // Show results dropdown
+                        clientResultsDiv.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error searching for clients:', error);
+                    });
+            }, 300); // 300ms delay to prevent too many requests
+        }
+        
+        // Function to select a client
+        function selectClient(client) {
+            selectedClient = client;
+            
+            // Update input values
+            clientSearchInput.value = client.name;
+            clientFilterInput.value = client.id;
+            
+            // Hide results dropdown
+            clientResultsDiv.style.display = 'none';
+        }
+        
+        // Add event listener for input changes
+        if (clientSearchInput) {
+            clientSearchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                // If input is cleared, reset the client filter
+                if (query === '') {
+                    clientFilterInput.value = '';
+                    selectedClient = null;
+                    clientResultsDiv.style.display = 'none';
+                } else {
+                    searchClients(query);
+                }
+            });
+            
+            // Add event listener to hide dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!clientSearchInput.contains(event.target) && !clientResultsDiv.contains(event.target)) {
+                    clientResultsDiv.style.display = 'none';
+                    
+                    // If no client is selected and search input has text, reset it
+                    if (!selectedClient && clientSearchInput.value.trim() !== '') {
+                        clientSearchInput.value = '';
+                        clientFilterInput.value = '';
+                    }
+                }
+            });
+        }
+    });
+</script>
 {% endblock %} 

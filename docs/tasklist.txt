@@ -77,3 +77,9 @@ Next Steps:
 8. Implement role-based access control for all routes
 9. Add missing icon in admin/users view 
 
+
+
+
+
+Description: Edit Product Groups in Admin Dashboard - each product group can have several product elements, each consisting of "label" and "activity" texts. Make editing of those simple, each line should be input  type="text" placeholder="Label" and input  type="text" placeholder="Activity", and next to them trash icon to delete line. Below last one should be button "+ Add" for adding new Product element. 
+

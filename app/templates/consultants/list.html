@@ -3,6 +3,9 @@
 {% block title %}Consultants - Resource Planning Application{% endblock %}
 
 {% block content %}
+<!-- Notification container -->
+<div id="notification-container" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
 <div id="notification-area" class="mb-3" style="display: none;">
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <span id="notification-message"></span>
@@ -17,62 +20,91 @@
         </h1>
         <p class="lead">Manage consultants and their expertise</p>
     </div>
+    <div class="col-auto">
+        {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
+        <a href="{{ url_for('consultants.manage_consultant') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Consultant
+        </a>
+        {% endif %}
+    </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-header bg-white">
-                <form method="GET" action="{{ url_for('consultants.list_consultants') }}" class="row g-3">
-                    <div class="col-md-6 position-relative">
-                        <label for="search" class="form-label">Search</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="search" name="search" placeholder="Name or email" value="{{ request.args.get('search', '') }}">
-                            {% if request.args.get('search') %}
-                            <button type="button" class="btn-close position-absolute end-0 top-50 translate-middle-y me-3" aria-label="Clear search" id="clear-search" style="z-index: 5;"></button>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="">All Statuses</option>
-                            {% for status in statuses %}
-                            <option value="{{ status.value }}" {% if request.args.get('status') == status.value %}selected{% endif %}>{{ status.value }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search"></i> Filter
-                        </button>
-                    </div>
-                </form>
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">Search & Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('consultants.list_consultants') }}" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="search" name="search" placeholder="Search by name or skill..." value="{{ request.args.get('search', '') }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    {% if request.args.get('search') %}
+                    <button class="btn btn-outline-secondary" type="button" id="clear-search">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
             </div>
-        </div>
+            <div class="col-md-3">
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    {% for status in statuses %}
+                    <option value="{{ status.value }}" {% if request.args.get('status') == status.value %}selected{% endif %}>
+                        {{ status.value }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="expertise" name="expertise">
+                    <option value="">All Expertise</option>
+                    <optgroup label="Product Groups">
+                        {% for group in product_groups %}
+                        <option value="group_{{ group.id }}" {% if request.args.get('expertise') == 'group_' ~ group.id %}selected{% endif %}>
+                            {{ group.name }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Product Elements">
+                        {% for element in product_elements %}
+                        <option value="element_{{ element.id }}" {% if request.args.get('expertise') == 'element_' ~ element.id %}selected{% endif %}>
+                            {{ element.label }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <div class="row">
     <div class="col-12">
         <div class="card shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Consultants</h5>
-                {% if current_user.username == 'admin' or 'Admin' in user_roles or 'Manager' in user_roles %}
-                <a href="{{ url_for('consultants.manage_consultant') }}" class="btn btn-sm btn-primary" title="Add Consultant">
-                    <i class="fas fa-plus"></i>
-                </a>
-                {% endif %}
+            <div class="card-header bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Consultants ({{ consultants|length }})</h5>
+                </div>
             </div>
             <div class="card-body p-0">
                 {% if consultants %}
                 <div class="accordion" id="consultantsAccordion">
                     {% for consultant in consultants %}
-                    <div class="accordion-item mb-3 border rounded">
-                        <div class="accordion-header d-flex align-items-center p-2" id="heading-{{ consultant.id }}">
-                            <div class="row w-100 align-items-center">
+                    <div class="accordion-item" style="border-width: 1px;">
+                        <div class="accordion-header" id="heading-{{ consultant.id }}">
+                            <div class="row p-3 align-items-center" data-bs-toggle="collapse" data-bs-target="#collapse-{{ consultant.id }}" aria-expanded="false" aria-controls="collapse-{{ consultant.id }}" style="cursor: pointer;">
                                 <div class="col-md-3">
                                     <strong>{{ consultant.user.first_name }} {{ consultant.user.last_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ consultant.user.email }}</small>
                                 </div>
                                 <div class="col-md-2">
                                     {% if consultant.status == 'Active' %}
@@ -88,24 +120,27 @@
                                 </div>
                                 <div class="col-md-5">
                                     <div class="expertise-preview" style="max-height: 40px; overflow-y: auto;">
-                                        {% if consultant.custom_data and 'expertise' in consultant.custom_data %}
-                                            {% set group_expertise = {} %}
-                                            {% for key, exp_data in consultant.custom_data['expertise'].items() %}
-                                                {% if exp_data['type'] == 'product_group' %}
-                                                    {% set group = product_groups|selectattr('id', 'eq', exp_data['id'])|first %}
-                                                    {% if group %}
-                                                    <span class="badge bg-success me-1 mb-1">
-                                                        {{ group.name }} 
-                                                        <span class="ms-1">
-                                                            {% for i in range(1, exp_data['rating'] + 1) %}
-                                                            <i class="fas fa-star text-warning"></i>
-                                                            {% endfor %}
-                                                        </span>
+                                        {% for entry in consultant.expertise_entries %}
+                                            {% if entry.product_group %}
+                                                <span class="badge bg-success me-1 mb-1">
+                                                    {{ entry.product_group.name }} 
+                                                    <span class="ms-1">
+                                                        {% for i in range(1, entry.rating + 1) %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                        {% endfor %}
                                                     </span>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endfor %}
-                                        {% endif %}
+                                                </span>
+                                            {% elif entry.product_element %}
+                                                <span class="badge bg-info me-1 mb-1">
+                                                    {{ entry.product_element.label }} 
+                                                    <span class="ms-1">
+                                                        {% for i in range(1, entry.rating + 1) %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                        {% endfor %}
+                                                    </span>
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
                                 </div>
                                 <div class="col-md-2 text-end">
@@ -148,80 +183,95 @@
                                         <div class="col-md-3">
                                             <label for="calendar-{{ consultant.id }}" class="form-label">Calendar Name</label>
                                             <input type="text" class="form-control form-control-sm" id="calendar-{{ consultant.id }}" name="calendar_name" 
-                                                   value="{{ consultant.calendar_name or '' }}">
+                                                   value="{{ consultant.calendar_name or '' }}" placeholder="Calendar name">
                                         </div>
                                         <div class="col-md-3">
                                             <label for="notes-{{ consultant.id }}" class="form-label">Notes</label>
-                                            <input type="text" class="form-control form-control-sm" id="notes-{{ consultant.id }}" name="notes" 
-                                                   value="{{ consultant.notes or '' }}">
+                                            <textarea class="form-control form-control-sm" id="notes-{{ consultant.id }}" name="notes" 
+                                                      rows="1" placeholder="Notes">{{ consultant.notes or '' }}</textarea>
                                         </div>
                                     </div>
+                                    
+                                    <hr>
                                     
                                     <h6 class="mb-3">Expertise</h6>
                                     
-                                    <!-- Product Groups with collapsible elements -->
-                                    <div class="accordion" id="expertiseAccordion-{{ consultant.id }}">
-                                        {% for group in product_groups %}
-                                        <div class="accordion-item mb-2 border-0">
-                                            <div class="accordion-header d-flex align-items-center py-1 px-2" id="group-heading-{{ consultant.id }}-{{ group.id }}">
-                                                <div class="d-flex align-items-center w-100">
-                                                    <div class="me-2 text-muted" style="width: 20px;">
-                                                        <i class="fas fa-times-circle clear-group-rating" 
-                                                           data-consultant-id="{{ consultant.id }}" 
-                                                           data-group-id="{{ group.id }}" 
-                                                           style="cursor: pointer; font-size: 0.8rem; opacity: 0.5;"
-                                                           title="Clear rating"></i>
-                                                    </div>
-                                                    <div class="me-2" style="width: 200px;">{{ group.name }}</div>
-                                                    <div class="rating-stars" data-type="product_group" data-id="{{ group.id }}">
-                                                        {% for i in range(1, 6) %}
-                                                            <i class="star-rating fas fa-star text-muted" data-value="{{ i }}" style="opacity: 0.3;"></i>
-                                                        {% endfor %}
-                                                    </div>
-                                                    <div class="ms-auto">
-                                                        <button class="btn btn-sm btn-link p-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#group-collapse-{{ consultant.id }}-{{ group.id }}" aria-expanded="false" aria-controls="group-collapse-{{ consultant.id }}-{{ group.id }}">
-                                                            <i class="fas fa-chevron-down"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div id="group-collapse-{{ consultant.id }}-{{ group.id }}" class="accordion-collapse collapse" aria-labelledby="group-heading-{{ consultant.id }}-{{ group.id }}" data-bs-parent="#expertiseAccordion-{{ consultant.id }}">
-                                                <div class="accordion-body p-2">
-                                                    {% if group.elements %}
-                                                    <div class="row">
-                                                        {% for element in group.elements %}
-                                                        <div class="col-md-6 mb-2">
-                                                            <div class="d-flex align-items-center">
-                                                                <div class="me-2 text-muted" style="width: 20px;">
-                                                                    <i class="fas fa-times-circle clear-element-rating" 
-                                                                       data-consultant-id="{{ consultant.id }}" 
-                                                                       data-element-id="{{ element.id }}" 
-                                                                       style="cursor: pointer; font-size: 0.8rem; opacity: 0.5;"
-                                                                       title="Clear rating"></i>
-                                                                </div>
-                                                                <div class="me-2" style="width: 150px;">{{ element.label }}</div>
-                                                                <div class="rating-stars" data-type="product_element" data-id="{{ element.id }}">
-                                                                    {% for i in range(1, 6) %}
-                                                                        <i class="star-rating fas fa-star text-muted" data-value="{{ i }}" style="opacity: 0.3;"></i>
-                                                                    {% endfor %}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {% endfor %}
-                                                    </div>
-                                                    {% else %}
-                                                    <div class="text-muted small">No elements defined for this group</div>
-                                                    {% endif %}
-                                                </div>
+                                    {% for group in product_groups %}
+                                    <div class="mb-4">
+                                        <div class="group-heading d-flex align-items-center mb-2">
+                                            <div>
+                                                <strong>{{ group.name }}</strong>
+                                                <span class="text-muted small ms-2">{{ group.description }}</span>
                                             </div>
                                         </div>
-                                        {% endfor %}
+                                        
+                                        <div class="rating-container">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="rating-stars me-2" data-type="product_group" data-id="{{ group.id }}">
+                                                    {% set rating = 0 %}
+                                                    {% if consultant.custom_data and 'expertise' in consultant.custom_data %}
+                                                        {% for key, exp_data in consultant.custom_data['expertise'].items() %}
+                                                            {% if exp_data['type'] == 'product_group' and exp_data['id'] == group.id %}
+                                                                {% set rating = exp_data['rating'] %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    
+                                                    {% for i in range(1, 6) %}
+                                                    <i class="fas fa-star star-rating {% if i <= rating %}text-warning{% else %}text-muted{% endif %}" 
+                                                       data-value="{{ i }}"></i>
+                                                    {% endfor %}
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary clear-group-rating" 
+                                                        data-group-id="{{ group.id }}" 
+                                                        data-consultant-id="{{ consultant.id }}"
+                                                        title="Clear Rating">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if group.elements %}
+                                        <div class="elements-container ms-4">
+                                            {% for element in group.elements %}
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="col-md-4">
+                                                    <small>{{ element.label }}</small>
+                                                    <span class="d-block text-muted smaller">{{ element.activity|default('') }}</span>
+                                                </div>
+                                                <div class="col-md-8 d-flex align-items-center">
+                                                    <div class="rating-stars me-2" data-type="product_element" data-id="{{ element.id }}">
+                                                        {% set rating = 0 %}
+                                                        {% if consultant.custom_data and 'expertise' in consultant.custom_data %}
+                                                            {% for key, exp_data in consultant.custom_data['expertise'].items() %}
+                                                                {% if exp_data['type'] == 'product_element' and exp_data['id'] == element.id %}
+                                                                    {% set rating = exp_data['rating'] %}
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% endif %}
+                                                        
+                                                        {% for i in range(1, 6) %}
+                                                        <i class="fas fa-star star-rating {% if i <= rating %}text-warning{% else %}text-muted{% endif %}" 
+                                                           data-value="{{ i }}"></i>
+                                                        {% endfor %}
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary clear-element-rating" 
+                                                            data-element-id="{{ element.id }}"
+                                                            data-consultant-id="{{ consultant.id }}"
+                                                            title="Clear Rating">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
+                                    {% endfor %}
                                     
                                     <div class="d-flex justify-content-end mt-3">
                                         <button type="button" class="btn btn-sm btn-primary save-expertise" data-consultant-id="{{ consultant.id }}" title="Save Changes">
-                                            <i class="fas fa-save"></i>
+                                            <i class="fas fa-save"></i> Save
                                         </button>
                                     </div>
                                 </form>
@@ -425,6 +475,11 @@
         const saveButtons = document.querySelectorAll('.save-expertise');
         saveButtons.forEach(button => {
             button.addEventListener('click', function() {
+                // Show loading state
+                const originalText = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+                
                 const consultantId = this.getAttribute('data-consultant-id');
                 const form = document.getElementById(`consultant-form-${consultantId}`);
                 const ratingContainers = form.querySelectorAll('.rating-stars');
@@ -453,6 +508,7 @@
                     
                     // Collect all expertise data
                     const expertiseData = [];
+                    let expertiseChanges = false;
                     
                     ratingContainers.forEach(container => {
                         const type = container.getAttribute('data-type');
@@ -462,6 +518,12 @@
                         // Find the highest rated star
                         const activeStars = container.querySelectorAll('.star-rating.text-warning');
                         rating = activeStars.length;
+                        
+                        // Check if this is a change from the original state
+                        const originalActiveStars = container.querySelectorAll('.star-rating.active');
+                        if (originalActiveStars.length !== rating) {
+                            expertiseChanges = true;
+                        }
                         
                         if (rating > 0) {
                             expertiseData.push({
@@ -491,33 +553,68 @@
                     });
                     
                     // Wait for all saves to complete
-                    return Promise.all(savePromises);
+                    return Promise.all(savePromises).then(results => {
+                        return {
+                            results: results,
+                            detailsResult: result,
+                            expertiseChanges: expertiseChanges
+                        };
+                    });
                 })
-                .then(results => {
+                .then(data => {
                     // Check if all saves were successful
-                    const allSuccessful = results.every(result => result.success);
+                    const allSuccessful = data.results.every(result => result.success);
+                    
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
                     
                     if (allSuccessful) {
-                        // Show in-app notification instead of alert
-                        showNotification('Consultant updated successfully');
+                        // Show success notification
+                        let message;
                         
-                        // Collapse the accordion
-                        const collapseElement = document.getElementById(`collapse-${consultantId}`);
-                        const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
-                        if (bsCollapse) {
-                            bsCollapse.hide();
+                        // Check if expertise data was updated
+                        const expertiseUpdated = data.results && data.results.length > 0;
+                        
+                        // If no changes were made to either consultant details or expertise
+                        if (data.detailsResult.message === 'No changes were made' && !expertiseUpdated) {
+                            message = 'No changes were made';
+                        }
+                        // If expertise data was updated but no basic details were changed
+                        else if (data.detailsResult.message === 'No changes were made' && expertiseUpdated) {
+                            message = 'Expertise updated successfully';
+                        } else {
+                            message = data.detailsResult.message || 'Consultant updated successfully';
                         }
                         
-                        // Reload the page to show updated data
-                        window.location.reload();
+                        showNotification(message);
+                        
+                        // Only collapse the accordion if changes were made
+                        if (message !== 'No changes were made') {
+                            const collapseElement = document.getElementById(`collapse-${consultantId}`);
+                            const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
+                            if (bsCollapse) {
+                                bsCollapse.hide();
+                            }
+                        }
                     } else {
                         // Show error notification
                         showNotification('Error updating expertise. Please try again.', 'danger');
                     }
                 })
                 .catch(error => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    
                     console.error('Error:', error);
-                    showNotification('Error updating consultant. Please try again.', 'danger');
+                    
+                    // Show detailed error message
+                    let errorMessage = 'Error updating consultant. Please try again.';
+                    if (error.message) {
+                        errorMessage = error.message;
+                    }
+                    showNotification(errorMessage, 'danger');
                 });
             });
         });
@@ -537,9 +634,24 @@
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                const consultantId = this.getAttribute('data-consultant-id');
                 const groupId = this.getAttribute('data-group-id');
-                const container = this.closest('.accordion-header').querySelector('.rating-stars');
+                // Get the consultant ID directly from the button
+                const consultantId = this.getAttribute('data-consultant-id');
+                
+                if (!consultantId) {
+                    console.error('Missing consultant ID');
+                    showNotification('Error: Missing consultant ID', 'danger');
+                    return;
+                }
+                
+                const container = this.closest('.rating-container').querySelector('.rating-stars');
+                
+                // Check if there are any active stars (if not, nothing to clear)
+                const activeStars = container.querySelectorAll('.star-rating.text-warning');
+                if (activeStars.length === 0) {
+                    console.log('No active stars to clear');
+                    return;
+                }
                 
                 // Clear stars visually
                 const stars = container.querySelectorAll('.star-rating');
@@ -547,6 +659,11 @@
                     s.classList.remove('text-warning', 'active');
                     s.classList.add('text-muted');
                 });
+                
+                // Show loading state
+                const originalText = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
                 
                 // Send request to clear expertise
                 fetch('/consultants/expertise/update', {
@@ -558,17 +675,47 @@
                         consultant_id: consultantId,
                         expertise_type: 'product_group',
                         item_id: groupId,
-                        rating: 0
+                        rating: 0,
+                        notes: ''
                     })
                 })
                 .then(response => response.json())
                 .then(result => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    
                     if (!result.success) {
                         console.error('Error clearing expertise:', result.message);
+                        showNotification('Error clearing expertise: ' + result.message, 'danger');
+                        
+                        // Restore stars if there was an error
+                        stars.forEach((s, index) => {
+                            if (index < activeStars.length) {
+                                s.classList.add('text-warning', 'active');
+                                s.classList.remove('text-muted');
+                            }
+                        });
+                    } else {
+                        console.log('Group expertise cleared successfully');
+                        showNotification(result.message || 'Expertise cleared successfully');
                     }
                 })
                 .catch(error => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    
                     console.error('Error:', error);
+                    showNotification('Error clearing expertise', 'danger');
+                    
+                    // Restore stars if there was an error
+                    stars.forEach((s, index) => {
+                        if (index < activeStars.length) {
+                            s.classList.add('text-warning', 'active');
+                            s.classList.remove('text-muted');
+                        }
+                    });
                 });
             });
         });
@@ -579,9 +726,24 @@
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                const consultantId = this.getAttribute('data-consultant-id');
                 const elementId = this.getAttribute('data-element-id');
+                // Get the consultant ID directly from the button
+                const consultantId = this.getAttribute('data-consultant-id');
+                
+                if (!consultantId) {
+                    console.error('Missing consultant ID');
+                    showNotification('Error: Missing consultant ID', 'danger');
+                    return;
+                }
+                
                 const container = this.closest('.d-flex').querySelector('.rating-stars');
+                
+                // Check if there are any active stars (if not, nothing to clear)
+                const activeStars = container.querySelectorAll('.star-rating.text-warning');
+                if (activeStars.length === 0) {
+                    console.log('No active stars to clear');
+                    return;
+                }
                 
                 // Clear stars visually
                 const stars = container.querySelectorAll('.star-rating');
@@ -589,6 +751,11 @@
                     s.classList.remove('text-warning', 'active');
                     s.classList.add('text-muted');
                 });
+                
+                // Show loading state
+                const originalText = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
                 
                 // Send request to clear expertise
                 fetch('/consultants/expertise/update', {
@@ -600,17 +767,47 @@
                         consultant_id: consultantId,
                         expertise_type: 'product_element',
                         item_id: elementId,
-                        rating: 0
+                        rating: 0,
+                        notes: ''
                     })
                 })
                 .then(response => response.json())
                 .then(result => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    
                     if (!result.success) {
                         console.error('Error clearing expertise:', result.message);
+                        showNotification('Error clearing expertise: ' + result.message, 'danger');
+                        
+                        // Restore stars if there was an error
+                        stars.forEach((s, index) => {
+                            if (index < activeStars.length) {
+                                s.classList.add('text-warning', 'active');
+                                s.classList.remove('text-muted');
+                            }
+                        });
+                    } else {
+                        console.log('Element expertise cleared successfully');
+                        showNotification(result.message || 'Expertise cleared successfully');
                     }
                 })
                 .catch(error => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    
                     console.error('Error:', error);
+                    showNotification('Error clearing expertise', 'danger');
+                    
+                    // Restore stars if there was an error
+                    stars.forEach((s, index) => {
+                        if (index < activeStars.length) {
+                            s.classList.add('text-warning', 'active');
+                            s.classList.remove('text-muted');
+                        }
+                    });
                 });
             });
         });
@@ -628,23 +825,25 @@
     }
 
     function displayNotification(message, type = 'success') {
-        const notificationArea = document.getElementById('notification-area');
-        const notificationMessage = document.getElementById('notification-message');
-        const alertElement = notificationArea.querySelector('.alert');
+        const notificationContainer = document.getElementById('notification-container');
         
-        // Set message
-        notificationMessage.textContent = message;
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
         
-        // Set alert type
-        alertElement.className = `alert alert-${type} alert-dismissible fade show`;
+        // Add to container
+        notificationContainer.appendChild(notification);
         
-        // Show notification
-        notificationArea.style.display = 'block';
-        
-        // Auto-hide after 5 seconds
+        // Auto-dismiss after 5 seconds
         setTimeout(() => {
-            const bsAlert = new bootstrap.Alert(alertElement);
-            bsAlert.close();
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 150);
         }, 5000);
     }
 </script>

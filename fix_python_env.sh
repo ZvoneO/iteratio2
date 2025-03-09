@@ -2,7 +2,7 @@
 
 # fix_python_env.sh - Script to fix Python environment issues
 # This script addresses the "No module named 'encodings'" error by ensuring
-# the correct Python interpreter is used
+# the correct Python interpreter is used and fixes SQLAlchemy import issues
 
 echo "Fixing Python environment issues..."
 
@@ -28,9 +28,15 @@ if [ -f "requirements.txt" ]; then
 else
     # Install basic Flask packages if requirements.txt doesn't exist
     pip install flask flask-sqlalchemy flask-login
+    # Ensure we have the correct SQLAlchemy version
+    pip install "sqlalchemy>=2.0.0"
 fi
 
-# 4. Create a wrapper script to run the application with the correct Python
+# 4. Fix SQLAlchemy import issues
+echo "Fixing SQLAlchemy import issues..."
+grep -l "from sqlalchemy.orm import flag_modified" app/routes/*.py | xargs -I{} sed -i 's/from sqlalchemy.orm import flag_modified/from sqlalchemy.orm.attributes import flag_modified/g' {}
+
+# 5. Create a wrapper script to run the application with the correct Python
 echo "Creating a wrapper script to run the application..."
 cat > run_app.sh << 'EOF'
 #!/bin/bash

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app as app
 from flask_login import login_required, current_user
-from ..models import db, ProductService, ProductGroup, ProductElement, Role
+from ..models import db, ProductService, ProductGroup, ProductElement, Role, List
 from functools import wraps
 from ..utils import user_has_role as utils_user_has_role
 from contextlib import contextmanager
@@ -212,7 +212,11 @@ def list_groups():
     for group in groups:
         group.elements = ProductElement.query.filter_by(group_id=group.id).all()
     
-    return render_template('catalog/groups/list.html', groups=groups)
+    # Get phase durations list for reference
+    phase_durations_list = List.query.filter_by(name='Phase Durations').first()
+    phase_durations = {duration.id: duration.value for duration in phase_durations_list.items} if phase_durations_list else {}
+    
+    return render_template('catalog/groups/list.html', groups=groups, phase_durations=phase_durations)
 
 @catalog_bp.route('/groups/group/<int:group_id>', methods=['GET', 'POST'])
 @catalog_bp.route('/groups/group/new', methods=['GET', 'POST'])
@@ -227,6 +231,10 @@ def manage_group(group_id=None):
     # Get group if editing, otherwise None
     group = ProductGroup.query.get_or_404(group_id) if group_id else None
     
+    # Get phase durations list for dropdown
+    phase_durations_list = List.query.filter_by(name='PhaseDuration').first()
+    phase_durations = phase_durations_list.items if phase_durations_list else []
+    
     # If editing, load the products and elements in this group
     products = []
     elements = []
@@ -239,6 +247,7 @@ def manage_group(group_id=None):
             # Get form data
             name = request.form.get('name')
             description = request.form.get('description')
+            duration_id = request.form.get('duration_id')
             
             # Get product elements data
             element_labels = request.form.getlist('element_label[]')
@@ -260,6 +269,7 @@ def manage_group(group_id=None):
                     # Update existing group
                     group.name = name
                     group.description = description
+                    group.duration_id = duration_id if duration_id else None
                     
                     # Delete existing elements
                     ProductElement.query.filter_by(group_id=group.id).delete()
@@ -267,7 +277,8 @@ def manage_group(group_id=None):
                     # Create new group
                     group = ProductGroup(
                         name=name,
-                        description=description
+                        description=description,
+                        duration_id=duration_id if duration_id else None
                     )
                     db.session.add(group)
                     db.session.flush()  # Flush to get the group ID
@@ -289,7 +300,7 @@ def manage_group(group_id=None):
             flash(f'Error {"updating" if group_id else "creating"} group: {str(e)}', 'danger')
             return redirect(url_for('catalog.manage_group', group_id=group_id))
     
-    return render_template('catalog/group_form.html', group=group, products=products, elements=elements)
+    return render_template('catalog/group_form.html', group=group, products=products, elements=elements, phase_durations=phase_durations)
 
 @catalog_bp.route('/groups/delete/<int:group_id>', methods=['POST'])
 @login_required

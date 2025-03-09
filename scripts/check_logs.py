@@ -1,42 +1,55 @@
 #!/usr/bin/env python3
 """
-Log Analyzer Script
+Log Analysis Tool for Resource Planning Application
 
-This script analyzes log files to help diagnose issues in the application.
-It can filter logs by level, module, and time range.
+This script provides functionality to analyze log files, filter by various criteria,
+and display results in a readable format.
+
+Usage:
+    python check_logs.py [options]
+
+Options:
+    --list              List available log files
+    --file FILE         Specify log file to analyze (default: all log files)
+    --level LEVEL       Filter by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    --module MODULE     Filter by module name
+    --hours HOURS       Show logs from the last N hours
+    --contains TEXT     Filter logs containing specific text
+    --json              Output in JSON format
+    --help              Show this help message
 """
 
 import os
-import re
 import sys
+import re
+import json
 import argparse
 from datetime import datetime, timedelta
-import json
+import glob
+from colorama import init, Fore, Style
 
-# ANSI color codes for terminal output
-COLORS = {
-    'RESET': '\033[0m',
-    'RED': '\033[91m',
-    'GREEN': '\033[92m',
-    'YELLOW': '\033[93m',
-    'BLUE': '\033[94m',
-    'PURPLE': '\033[95m',
-    'CYAN': '\033[96m',
-    'WHITE': '\033[97m',
-}
+# Initialize colorama
+init()
 
-# Log level colors
+# Define color mapping for log levels
 LEVEL_COLORS = {
-    'DEBUG': COLORS['BLUE'],
-    'INFO': COLORS['GREEN'],
-    'WARNING': COLORS['YELLOW'],
-    'ERROR': COLORS['RED'],
-    'CRITICAL': COLORS['PURPLE'],
+    'DEBUG': Fore.BLUE,
+    'INFO': Fore.GREEN,
+    'WARNING': Fore.YELLOW,
+    'ERROR': Fore.RED,
+    'CRITICAL': Fore.RED + Style.BRIGHT
 }
 
 def parse_log_line(line):
-    """Parse a log line into its components."""
-    # Example log line: 2023-04-15 12:34:56,789 - admin - INFO - User updated successfully
+    """
+    Parse a log line into its components.
+    
+    Expected format: TIMESTAMP - MODULE - LEVEL - MESSAGE
+    
+    Returns:
+        dict: Parsed log entry or None if the line doesn't match the expected format
+    """
+    # Regular expression to match log format
     pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (\w+) - (\w+) - (.+)'
     match = re.match(pattern, line)
     
@@ -46,161 +59,156 @@ def parse_log_line(line):
             timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S,%f')
             return {
                 'timestamp': timestamp,
+                'timestamp_str': timestamp_str,
                 'module': module,
                 'level': level,
-                'message': message.strip()
+                'message': message,
+                'raw': line
             }
         except ValueError:
             return None
     return None
 
 def filter_logs(log_file, level=None, module=None, hours=None, contains=None, json_output=False):
-    """Filter logs based on criteria."""
-    if not os.path.exists(log_file):
-        print(f"Log file not found: {log_file}")
-        return []
+    """
+    Filter logs based on criteria.
     
+    Args:
+        log_file (str): Path to log file
+        level (str): Log level to filter by
+        module (str): Module name to filter by
+        hours (int): Show logs from the last N hours
+        contains (str): Filter logs containing specific text
+        json_output (bool): Whether to output in JSON format
+        
+    Returns:
+        list: Filtered log entries
+    """
     filtered_logs = []
-    time_threshold = None
     
+    # Calculate cutoff time if hours is specified
+    cutoff_time = None
     if hours:
-        time_threshold = datetime.now() - timedelta(hours=hours)
+        cutoff_time = datetime.now() - timedelta(hours=int(hours))
     
-    with open(log_file, 'r') as f:
-        current_entry = []
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Check if this is a new log entry or continuation
-            parsed = parse_log_line(line)
-            
-            if parsed:
-                # If we have a previous entry, add it to filtered logs if it matches criteria
-                if current_entry and current_entry[0]:
-                    filtered_logs.append(current_entry[0])
+    try:
+        with open(log_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
                 
-                # Start a new entry
-                current_entry = [parsed]
+                # Parse log line
+                log_entry = parse_log_line(line)
+                if not log_entry:
+                    continue
                 
                 # Apply filters
-                if level and parsed['level'] != level.upper():
-                    current_entry = [None]  # Mark as not matching
+                if level and log_entry['level'] != level:
                     continue
                 
-                if module and parsed['module'] != module:
-                    current_entry = [None]  # Mark as not matching
+                if module and log_entry['module'] != module:
                     continue
                 
-                if time_threshold and parsed['timestamp'] < time_threshold:
-                    current_entry = [None]  # Mark as not matching
+                if cutoff_time and log_entry['timestamp'] < cutoff_time:
                     continue
                 
-                if contains and contains.lower() not in parsed['message'].lower():
-                    current_entry = [None]  # Mark as not matching
+                if contains and contains.lower() not in log_entry['raw'].lower():
                     continue
-            else:
-                # This is a continuation of the previous entry
-                if current_entry and current_entry[0]:
-                    current_entry[0]['message'] += f"\n{line}"
-        
-        # Add the last entry if it matches
-        if current_entry and current_entry[0]:
-            filtered_logs.append(current_entry[0])
-    
-    if json_output:
-        # Convert datetime objects to strings for JSON serialization
-        for log in filtered_logs:
-            log['timestamp'] = log['timestamp'].strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
-        return json.dumps(filtered_logs, indent=2)
+                
+                filtered_logs.append(log_entry)
+    except FileNotFoundError:
+        if not json_output:
+            print(f"Error: Log file '{log_file}' not found.")
+        return []
+    except Exception as e:
+        if not json_output:
+            print(f"Error reading log file '{log_file}': {str(e)}")
+        return []
     
     return filtered_logs
 
-def print_logs(logs):
-    """Print logs with color formatting."""
+def print_logs(logs, json_output=False):
+    """
+    Print logs in a readable format.
+    
+    Args:
+        logs (list): List of log entries
+        json_output (bool): Whether to output in JSON format
+    """
+    if json_output:
+        # Convert datetime objects to strings for JSON serialization
+        for log in logs:
+            log['timestamp'] = log['timestamp_str']
+        print(json.dumps(logs, indent=2))
+        return
+    
     for log in logs:
-        level_color = LEVEL_COLORS.get(log['level'], COLORS['WHITE'])
-        timestamp = log['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+        level_color = LEVEL_COLORS.get(log['level'], '')
+        timestamp = log['timestamp_str']
+        module = log['module']
+        level = log['level']
+        message = log['message']
         
-        print(f"{COLORS['CYAN']}{timestamp}{COLORS['RESET']} - "
-              f"{COLORS['YELLOW']}{log['module']}{COLORS['RESET']} - "
-              f"{level_color}{log['level']}{COLORS['RESET']} - "
-              f"{log['message']}")
-        print('-' * 80)
+        print(f"{Fore.WHITE}{timestamp} - {Fore.CYAN}{module} - {level_color}{level}{Fore.RESET} - {message}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Analyze application log files')
-    parser.add_argument('--file', '-f', help='Log file to analyze', default=None)
-    parser.add_argument('--level', '-l', help='Filter by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)', default=None)
-    parser.add_argument('--module', '-m', help='Filter by module name', default=None)
-    parser.add_argument('--hours', '-t', type=int, help='Show logs from the last N hours', default=None)
-    parser.add_argument('--contains', '-c', help='Filter logs containing this text', default=None)
-    parser.add_argument('--json', '-j', action='store_true', help='Output in JSON format')
+    """Main function to parse arguments and execute log analysis."""
+    parser = argparse.ArgumentParser(description='Log Analysis Tool')
     parser.add_argument('--list', action='store_true', help='List available log files')
+    parser.add_argument('--file', help='Specify log file to analyze (default: all log files)')
+    parser.add_argument('--level', help='Filter by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+    parser.add_argument('--module', help='Filter by module name')
+    parser.add_argument('--hours', type=int, help='Show logs from the last N hours')
+    parser.add_argument('--contains', help='Filter logs containing specific text')
+    parser.add_argument('--json', action='store_true', help='Output in JSON format')
     
     args = parser.parse_args()
     
-    # Get the logs directory
+    # Get log directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    logs_dir = os.path.join(os.path.dirname(script_dir), 'logs')
-    
-    if not os.path.exists(logs_dir):
-        print(f"Logs directory not found: {logs_dir}")
-        return 1
+    log_dir = os.path.join(os.path.dirname(script_dir), 'logs')
     
     # List available log files
     if args.list:
-        print(f"Available log files in {logs_dir}:")
-        for file in os.listdir(logs_dir):
-            if file.endswith('.log'):
-                file_path = os.path.join(logs_dir, file)
-                size = os.path.getsize(file_path)
-                print(f"  - {file} ({size/1024:.2f} KB)")
-        return 0
-    
-    # Determine which log file to analyze
-    log_file = args.file
-    if not log_file:
-        # Default to admin.log if it exists
-        default_log = os.path.join(logs_dir, 'admin.log')
-        if os.path.exists(default_log):
-            log_file = default_log
+        log_files = glob.glob(os.path.join(log_dir, '*.log'))
+        if log_files:
+            print("Available log files:")
+            for log_file in sorted(log_files):
+                print(f"  - {os.path.basename(log_file)}")
         else:
-            # Use the first log file found
-            log_files = [f for f in os.listdir(logs_dir) if f.endswith('.log')]
-            if log_files:
-                log_file = os.path.join(logs_dir, log_files[0])
-            else:
-                print("No log files found.")
-                return 1
+            print("No log files found.")
+        return
+    
+    # Determine which log files to analyze
+    if args.file:
+        log_files = [os.path.join(log_dir, args.file)]
+        if not args.file.endswith('.log'):
+            log_files = [f"{log_files[0]}.log"]
     else:
-        # If the file doesn't include a path, assume it's in the logs directory
-        if not os.path.isabs(log_file):
-            log_file = os.path.join(logs_dir, log_file)
+        log_files = glob.glob(os.path.join(log_dir, '*.log'))
     
-    # Filter and display logs
-    filtered_logs = filter_logs(
-        log_file, 
-        level=args.level, 
-        module=args.module, 
-        hours=args.hours, 
-        contains=args.contains,
-        json_output=args.json
-    )
+    # Filter and print logs
+    all_logs = []
+    for log_file in log_files:
+        logs = filter_logs(
+            log_file,
+            level=args.level,
+            module=args.module,
+            hours=args.hours,
+            contains=args.contains,
+            json_output=args.json
+        )
+        all_logs.extend(logs)
     
-    if args.json:
-        print(filtered_logs)
-    else:
-        if not filtered_logs:
-            print("No matching logs found.")
-            return 0
-        
-        print(f"Found {len(filtered_logs)} matching log entries in {log_file}:")
-        print('=' * 80)
-        print_logs(filtered_logs)
+    # Sort logs by timestamp
+    all_logs.sort(key=lambda x: x['timestamp'])
     
-    return 0
+    # Print logs
+    if all_logs:
+        print_logs(all_logs, json_output=args.json)
+    elif not args.json:
+        print("No logs found matching the specified criteria.")
 
 if __name__ == '__main__':
-    sys.exit(main()) 
+    main() 

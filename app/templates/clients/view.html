@@ -66,6 +66,16 @@
                         {% endif %}
                     </div>
                 </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Sales Person:</strong></p>
+                        <p>{{ client.sales_person if client.sales_person else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Project Manager:</strong></p>
+                        <p>{{ client.project_manager if client.project_manager else 'N/A' }}</p>
+                    </div>
+                </div>
             </div>
         </div>
 

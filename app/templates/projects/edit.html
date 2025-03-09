@@ -2,6 +2,20 @@
 
 {% block title %}Edit Project - {{ project.name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .client-result {
+        transition: background-color 0.2s;
+    }
+    .client-result:hover {
+        background-color: #f8f9fa;
+    }
+    .client-result:last-child {
+        border-bottom: none !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
@@ -19,7 +33,7 @@
 
 <div class="card shadow mb-4">
     <div class="card-body">
-        <form method="POST" action="{{ url_for('projects.edit_project', project_id=project.id) }}">
+        <form method="POST" action="{{ url_for('projects.edit_project', project_id=project.id) }}" id="edit-project-form">
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -31,13 +45,16 @@
                         <textarea class="form-control" id="description" name="description" rows="3">{{ project.description }}</textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="client_id" class="form-label">Client <span class="text-danger">*</span></label>
-                        <select class="form-select" id="client_id" name="client_id" required>
-                            <option value="">-- Select Client --</option>
-                            {% for client in clients %}
-                            <option value="{{ client.id }}" {% if client.id == project.client_id %}selected{% endif %}>{{ client.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <label for="client_search" class="form-label">Client <span class="text-danger">*</span></label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="client_search" placeholder="Search for a client..." autocomplete="off" value="{{ project.client.name if project.client else '' }}">
+                            <div id="client_results" class="dropdown-results position-absolute w-100 mt-1 shadow-sm" style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto; background-color: white; border: 1px solid #dee2e6; border-radius: 0.25rem;"></div>
+                            <input type="hidden" id="client_id" name="client_id" value="{{ project.client_id }}" required>
+                        </div>
+                        <div class="form-text text-muted mt-1">Type at least 2 characters to search</div>
+                        <div id="client_not_found" class="text-danger mt-1" style="display: none;">
+                            Client not found. <a href="{{ url_for('clients.create_client') }}" target="_blank">Create a new client</a>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="manager_id" class="form-label">Project Manager <span class="text-danger">*</span></label>
@@ -57,15 +74,6 @@
                     <div class="mb-3">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" value="{{ project.end_date.strftime('%Y-%m-%d') if project.end_date else '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                        <select class="form-select" id="status" name="status" required>
-                            <option value="">-- Select Status --</option>
-                            <option value="Active" {% if project.status == 'Active' %}selected{% endif %}>Active</option>
-                            <option value="On Hold" {% if project.status == 'On Hold' %}selected{% endif %}>On Hold</option>
-                            <option value="Completed" {% if project.status == 'Completed' %}selected{% endif %}>Completed</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -251,6 +259,143 @@
         });
         
         // Product search and selection would be implemented here
+    });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client search handling
+        const clientSearchInput = document.getElementById('client_search');
+        const clientResultsDiv = document.getElementById('client_results');
+        const clientIdInput = document.getElementById('client_id');
+        const clientNotFoundDiv = document.getElementById('client_not_found');
+        
+        let searchTimeout;
+        let selectedClient = null;
+        
+        // Initialize with the current client
+        if (clientIdInput.value && clientSearchInput.value) {
+            selectedClient = {
+                id: clientIdInput.value,
+                name: clientSearchInput.value
+            };
+        }
+        
+        // Function to search for clients
+        function searchClients(query) {
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to prevent too many requests
+            searchTimeout = setTimeout(() => {
+                if (query.length < 2) {
+                    clientResultsDiv.style.display = 'none';
+                    clientNotFoundDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Make AJAX request to search for clients
+                fetch(`/clients/search?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear previous results
+                        clientResultsDiv.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            clientNotFoundDiv.style.display = 'block';
+                            clientResultsDiv.style.display = 'none';
+                            return;
+                        }
+                        
+                        clientNotFoundDiv.style.display = 'none';
+                        
+                        // Add results to dropdown
+                        data.forEach(client => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'p-2 border-bottom client-result';
+                            resultItem.style.cursor = 'pointer';
+                            resultItem.innerHTML = `<strong>${client.name}</strong>`;
+                            if (client.city || client.country) {
+                                resultItem.innerHTML += `<br><small>${client.city}${client.city && client.country ? ', ' : ''}${client.country}</small>`;
+                            }
+                            
+                            // Add click event to select client
+                            resultItem.addEventListener('click', () => {
+                                selectClient(client);
+                            });
+                            
+                            clientResultsDiv.appendChild(resultItem);
+                        });
+                        
+                        // Show results dropdown
+                        clientResultsDiv.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error searching for clients:', error);
+                    });
+            }, 300); // 300ms delay to prevent too many requests
+        }
+        
+        // Function to select a client
+        function selectClient(client) {
+            selectedClient = client;
+            
+            // Update input values
+            clientSearchInput.value = client.name;
+            clientIdInput.value = client.id;
+            
+            // Hide results dropdown
+            clientResultsDiv.style.display = 'none';
+            clientNotFoundDiv.style.display = 'none';
+        }
+        
+        // Add event listener for input changes
+        clientSearchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            searchClients(query);
+            
+            // Clear selected client if input is empty
+            if (query === '') {
+                clientIdInput.value = '';
+                selectedClient = null;
+            }
+        });
+        
+        // Add event listener for focus
+        clientSearchInput.addEventListener('focus', function() {
+            const query = this.value.trim();
+            if (query.length >= 2) {
+                searchClients(query);
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!clientSearchInput.contains(event.target) && !clientResultsDiv.contains(event.target)) {
+                clientResultsDiv.style.display = 'none';
+                
+                // If no client is selected and input is not empty, show not found message
+                if (!selectedClient && clientSearchInput.value.trim() !== '') {
+                    clientNotFoundDiv.style.display = 'block';
+                }
+            }
+        });
+        
+        // Form validation
+        const form = document.getElementById('edit-project-form');
+        form.addEventListener('submit', function(e) {
+            // Validate client selection
+            if (!clientIdInput.value) {
+                e.preventDefault();
+                alert('Please select a valid client.');
+                clientSearchInput.focus();
+                return;
+            }
+        });
     });
 </script>
 {% endblock %} 

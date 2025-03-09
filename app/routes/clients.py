@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from ..models import db, Client, List, ListItem, Project, Role
 from functools import wraps
@@ -32,32 +32,101 @@ def manager_required(f):
 @login_required
 def list_clients():
     """Display a list of all clients."""
-    # Get clients based on user role
+    # Get search and filter parameters
+    search = request.args.get('search', '')
+    country_id = request.args.get('country', '')
+    status = request.args.get('status', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 20  # Show 20 clients per page
+    
+    # Base query
+    query = Client.query
+    
+    # Apply filters
+    if search:
+        query = query.filter(Client.name.ilike(f'%{search}%'))
+    
+    if country_id:
+        query = query.filter(Client.country_id == country_id)
+        
+    if status:
+        if status == 'active':
+            query = query.filter(Client.active == True)
+        elif status == 'inactive':
+            query = query.filter(Client.active == False)
+    
+    # Apply role-based filtering
     if user_has_role(current_user, 'Admin') or user_has_role(current_user, 'Manager'):
         # Admins and Managers see all clients
-        clients = Client.query.all()
+        filtered_query = query
     elif user_has_role(current_user, 'Project Manager'):
         # Project Managers see clients with projects they manage
         client_ids = db.session.query(Project.client_id).filter_by(manager_id=current_user.id).distinct()
-        clients = Client.query.filter(Client.id.in_(client_ids)).all()
+        filtered_query = query.filter(Client.id.in_(client_ids))
     else:
         # Other users don't see any clients
-        clients = []
+        filtered_query = query.filter(Client.id == None)  # Empty result
     
-    return render_template('clients/list.html', clients=clients)
+    # Order by name
+    filtered_query = filtered_query.order_by(Client.name)
+    
+    # Paginate the results
+    pagination = filtered_query.paginate(page=page, per_page=per_page, error_out=False)
+    clients = pagination.items
+    
+    # Get countries list for dropdown
+    countries_list = List.query.filter_by(name='Countries').first()
+    countries = countries_list.items if countries_list else []
+    
+    # Get sales persons list
+    sales_list = List.query.filter_by(name='Sales').first()
+    sales_persons = sales_list.items if sales_list else []
+    
+    # Get project managers (users with Project Manager role)
+    pm_role = Role.query.filter_by(name='Project Manager').first()
+    project_managers = pm_role.users if pm_role else []
+    
+    return render_template(
+        'clients/list.html', 
+        clients=clients,
+        countries=countries,
+        sales_persons=sales_persons,
+        project_managers=project_managers,
+        pagination=pagination
+    )
 
 @clients_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @manager_required
 def create_client():
-    """
-    Handle client creation.
+    """Create a new client."""
+    # Get countries list for dropdown
+    countries_list = List.query.filter_by(name='Countries').first()
+    if countries_list:
+        countries = countries_list.items
+    else:
+        countries = []
     
-    GET: Display client creation form
-    POST: Process client creation form submission
-    """
-    # Get countries for dropdown
-    countries = ListItem.query.join(ListItem.list).filter(ListItem.list.has(name='Countries')).all()
+    # Get sales persons list
+    sales_list = List.query.filter_by(name='Sales').first()
+    if sales_list:
+        sales_persons = sales_list.items
+    else:
+        sales_persons = []
+    
+    # Get industries list for dropdown
+    industries_list = List.query.filter_by(id=5).first()
+    if industries_list:
+        industries = industries_list.items
+    else:
+        industries = []
+    
+    # Get project managers (users with Project Manager role)
+    pm_role = Role.query.filter_by(name='Project Manager').first()
+    if pm_role:
+        project_managers = [user for user in pm_role.users]
+    else:
+        project_managers = []
     
     if request.method == 'POST':
         # Get form data
@@ -65,68 +134,120 @@ def create_client():
         address = request.form.get('address')
         city = request.form.get('city')
         country_id = request.form.get('country_id')
-        
-        # Validate form data
-        if not name:
-            flash('Client name is required.', 'danger')
-            return redirect(url_for('clients.create_client'))
+        sales_person = request.form.get('sales_person')
+        project_manager = request.form.get('project_manager')
+        industry = request.form.get('industry')
+        active = True  # Default to active
         
         # Create new client
         new_client = Client(
             name=name,
             address=address,
             city=city,
-            country_id=country_id if country_id else None
+            country_id=country_id if country_id else None,
+            sales_person=sales_person,
+            project_manager=project_manager,
+            industry=industry,
+            active=active
         )
         
-        # Add client to database
+        # Add to database
         db.session.add(new_client)
         db.session.commit()
         
-        flash('Client created successfully.', 'success')
+        flash('Client created successfully!', 'success')
         return redirect(url_for('clients.list_clients'))
     
-    return render_template('clients/create.html', countries=countries)
+    return render_template('clients/create.html', 
+                          countries=countries,
+                          sales_persons=sales_persons,
+                          project_managers=project_managers,
+                          industries=industries)
 
 @clients_bp.route('/edit/<int:client_id>', methods=['GET', 'POST'])
 @login_required
 @manager_required
 def edit_client(client_id):
-    """
-    Handle client editing.
-    
-    GET: Display client edit form
-    POST: Process client edit form submission
-    """
+    """Edit an existing client."""
+    # Get client
     client = Client.query.get_or_404(client_id)
     
-    # Get countries for dropdown
-    countries = ListItem.query.join(ListItem.list).filter(ListItem.list.has(name='Countries')).all()
+    # Get countries list for dropdown
+    countries_list = List.query.filter_by(name='Countries').first()
+    if countries_list:
+        countries = countries_list.items
+    else:
+        countries = []
+    
+    # Get sales persons list
+    sales_list = List.query.filter_by(name='Sales').first()
+    if sales_list:
+        sales_persons = sales_list.items
+    else:
+        sales_persons = []
+    
+    # Get industries list for dropdown
+    industries_list = List.query.filter_by(id=5).first()
+    if industries_list:
+        industries = industries_list.items
+    else:
+        industries = []
+    
+    # Get project managers (users with Project Manager role)
+    pm_role = Role.query.filter_by(name='Project Manager').first()
+    if pm_role:
+        project_managers = [user for user in pm_role.users]
+    else:
+        project_managers = []
     
     if request.method == 'POST':
-        # Get form data
-        name = request.form.get('name')
-        address = request.form.get('address')
-        city = request.form.get('city')
-        country_id = request.form.get('country_id')
+        # Check if it's an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
-        # Validate form data
-        if not name:
-            flash('Client name is required.', 'danger')
-            return redirect(url_for('clients.edit_client', client_id=client_id))
-        
-        # Update client
-        client.name = name
-        client.address = address
-        client.city = city
-        client.country_id = country_id if country_id else None
-        
-        db.session.commit()
-        
-        flash('Client updated successfully.', 'success')
-        return redirect(url_for('clients.list_clients'))
+        if is_ajax:
+            # Get JSON data
+            data = request.get_json()
+            
+            # Update client data
+            client.name = data.get('name')
+            client.address = data.get('address')
+            client.city = data.get('city')
+            client.country_id = data.get('country_id') if data.get('country_id') else None
+            client.sales_person = data.get('sales_person')
+            client.project_manager = data.get('project_manager')
+            client.industry = data.get('industry')
+            client.active = data.get('active', True)
+            
+            try:
+                # Save to database
+                db.session.commit()
+                return json.dumps({'success': True, 'message': 'Client updated successfully!'})
+            except Exception as e:
+                db.session.rollback()
+                return json.dumps({'success': False, 'message': f'Error updating client: {str(e)}'})
+        else:
+            # Regular form submission
+            client.name = request.form.get('name')
+            client.address = request.form.get('address')
+            client.city = request.form.get('city')
+            client.country_id = request.form.get('country_id') if request.form.get('country_id') else None
+            client.sales_person = request.form.get('sales_person')
+            client.project_manager = request.form.get('project_manager')
+            client.industry = request.form.get('industry')
+            client.active = request.form.get('active') == 'on'
+            
+            # Save to database
+            db.session.commit()
+            
+            flash('Client updated successfully!', 'success')
+            return redirect(url_for('clients.list_clients'))
     
-    return render_template('clients/edit.html', client=client, countries=countries)
+    return render_template('clients/edit.html', 
+                          client=client, 
+                          countries=countries,
+                          sales_persons=sales_persons,
+                          project_managers=project_managers,
+                          industries=industries)
 
 @clients_bp.route('/delete/<int:client_id>', methods=['POST'])
 @login_required
@@ -135,16 +256,35 @@ def delete_client(client_id):
     """Handle client deletion."""
     client = Client.query.get_or_404(client_id)
     
+    # Check if it's an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     # Check if client has projects
     if client.projects:
-        flash('Cannot delete client with associated projects.', 'danger')
-        return redirect(url_for('clients.list_clients'))
+        if is_ajax:
+            return json.dumps({'success': False, 'message': 'Cannot delete client with associated projects.'})
+        else:
+            flash('Cannot delete client with associated projects.', 'danger')
+            return redirect(url_for('clients.list_clients'))
     
-    db.session.delete(client)
-    db.session.commit()
-    
-    flash('Client deleted successfully.', 'success')
-    return redirect(url_for('clients.list_clients'))
+    try:
+        # Delete the client
+        db.session.delete(client)
+        db.session.commit()
+        
+        if is_ajax:
+            return json.dumps({'success': True, 'message': 'Client deleted successfully!'})
+        else:
+            flash('Client deleted successfully!', 'success')
+            return redirect(url_for('clients.list_clients'))
+    except Exception as e:
+        db.session.rollback()
+        
+        if is_ajax:
+            return json.dumps({'success': False, 'message': f'Error deleting client: {str(e)}'})
+        else:
+            flash(f'Error deleting client: {str(e)}', 'danger')
+            return redirect(url_for('clients.list_clients'))
 
 @clients_bp.route('/view/<int:client_id>')
 @login_required
@@ -229,6 +369,35 @@ def import_csv():
             return redirect(url_for('clients.import_csv'))
     
     return render_template('clients/import_csv.html')
+
+@clients_bp.route('/search', methods=['GET'])
+@login_required
+def search_clients():
+    """
+    Search for clients by name.
+    Returns JSON with matching clients.
+    """
+    query = request.args.get('query', '')
+    if len(query) < 2:
+        return jsonify([])
+    
+    # Search for clients matching the query
+    clients = Client.query.filter(Client.name.ilike(f'%{query}%')).limit(7).all()
+    
+    # Format the results
+    results = []
+    for client in clients:
+        client_data = {
+            'id': client.id,
+            'name': client.name,
+            'city': client.city or '',
+            'country': client.country.value if client.country else '',
+            'sales_person': client.sales_person or '',
+            'project_manager': client.project_manager or ''
+        }
+        results.append(client_data)
+    
+    return jsonify(results)
 
 # TODO: Add routes for client projects
 # TODO: Add routes for client contacts

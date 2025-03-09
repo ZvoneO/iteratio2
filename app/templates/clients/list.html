@@ -8,59 +8,55 @@
         <h1 class="h2">
             <i class="fas fa-building"></i> Clients
         </h1>
-        <p class="lead">Manage your client database</p>
+        <p class="lead">Manage client information</p>
     </div>
     <div class="col-auto">
-        {% if current_user.role in ['Admin', 'Manager'] %}
-        <div class="btn-group" role="group">
+        <div class="btn-group">
             <a href="{{ url_for('clients.create_client') }}" class="btn btn-primary">
-                <i class="fas fa-plus-circle"></i> Add Client
+                <i class="fas fa-plus"></i> Add Client
             </a>
             <a href="{{ url_for('clients.import_csv') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-file-import"></i> Import
+                <i class="fas fa-file-import"></i> Import CSV
             </a>
         </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- Search and Filter -->
+<!-- Search & Filter -->
 <div class="card shadow mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">Search and Filter</h5>
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">Search & Filter</h5>
     </div>
     <div class="card-body">
         <form method="GET" action="{{ url_for('clients.list_clients') }}" class="row g-3">
             <div class="col-md-4">
-                <label for="search" class="form-label">Search</label>
-                <input type="text" class="form-control" id="search" name="search" placeholder="Client name or code" value="{{ request.args.get('search', '') }}">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="search" name="search" placeholder="Search clients..." value="{{ request.args.get('search', '') }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
             </div>
             <div class="col-md-3">
-                <label for="industry" class="form-label">Industry</label>
-                <select class="form-select" id="industry" name="industry">
-                    <option value="">All Industries</option>
-                    <option value="Technology" {% if request.args.get('industry') == 'Technology' %}selected{% endif %}>Technology</option>
-                    <option value="Finance" {% if request.args.get('industry') == 'Finance' %}selected{% endif %}>Finance</option>
-                    <option value="Healthcare" {% if request.args.get('industry') == 'Healthcare' %}selected{% endif %}>Healthcare</option>
-                    <option value="Education" {% if request.args.get('industry') == 'Education' %}selected{% endif %}>Education</option>
-                    <option value="Manufacturing" {% if request.args.get('industry') == 'Manufacturing' %}selected{% endif %}>Manufacturing</option>
-                    <option value="Retail" {% if request.args.get('industry') == 'Retail' %}selected{% endif %}>Retail</option>
-                    <option value="Government" {% if request.args.get('industry') == 'Government' %}selected{% endif %}>Government</option>
-                    <option value="Non-profit" {% if request.args.get('industry') == 'Non-profit' %}selected{% endif %}>Non-profit</option>
-                    <option value="Other" {% if request.args.get('industry') == 'Other' %}selected{% endif %}>Other</option>
+                <select class="form-select" id="country" name="country">
+                    <option value="">All Countries</option>
+                    {% for country in countries %}
+                    <option value="{{ country.id }}" {% if request.args.get('country') == country.id|string %}selected{% endif %}>
+                        {{ country.value }}
+                    </option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Statuses</option>
                     <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
                     <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive</option>
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-search"></i> Search
+                    <i class="fas fa-filter"></i> Filter
                 </button>
             </div>
         </form>
@@ -68,156 +64,433 @@
 </div>
 
 <!-- Clients List -->
-<div class="card shadow">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Client List</h5>
-        <span class="badge bg-primary">{{ clients|length }} clients</span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Industry</th>
-                        <th>Contact</th>
-                        <th>Projects</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Clients ({{ clients|length }})</h5>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if clients %}
+                <div class="accordion" id="clientsAccordion">
                     {% for client in clients %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="fw-bold text-decoration-none">
-                                {{ client.name }}
-                            </a>
-                        </td>
-                        <td><span class="text-muted">{{ client.code or '-' }}</span></td>
-                        <td>{{ client.industry or '-' }}</td>
-                        <td>
-                            {% if client.email %}
-                            <a href="mailto:{{ client.email }}" class="text-decoration-none">
-                                {{ client.contact_name or client.email }}
-                            </a>
-                            {% else %}
-                            {{ client.contact_name or '-' }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-info">{{ client.projects|default(0, true) }}</span>
-                        </td>
-                        <td>
-                            {% if client.active %}
-                            <span class="badge bg-success">Active</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="btn btn-outline-primary">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if current_user.role in ['Admin', 'Manager'] %}
-                                <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteClientModal{{ client.id }}">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Delete Modal -->
-                            <div class="modal fade" id="deleteClientModal{{ client.id }}" tabindex="-1" aria-labelledby="deleteClientModalLabel{{ client.id }}" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteClientModalLabel{{ client.id }}">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="accordion-item" style="border-width: 1px;">
+                        <div class="accordion-header" id="heading-{{ client.id }}">
+                            <div class="row p-1 align-items-center" data-bs-toggle="collapse" data-bs-target="#collapse-{{ client.id }}" aria-expanded="false" aria-controls="collapse-{{ client.id }}" style="cursor: pointer;">
+                                <div class="col-md-3">
+                                    <strong>{{ client.name }}</strong>
+                                    {% if client.active %}
+                                    <span class="badge bg-success ms-1">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-1">Inactive</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    {{ client.city }}{% if client.country %}, {{ client.country.value }}{% endif %}
+                                    {% if client.industry %}
+                                    <div><small class="text-muted">{{ client.industry }}</small></div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <small class="text-muted">Sales:</small>
+                                            <div>{{ client.sales_person if client.sales_person else 'N/A' }}</div>
                                         </div>
-                                        <div class="modal-body text-start">
-                                            <p>Are you sure you want to delete the client <strong>{{ client.name }}</strong>?</p>
-                                            <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('clients.delete_client', client_id=client.id) }}" method="POST" class="d-inline">
-                                                <button type="submit" class="btn btn-danger">Delete Client</button>
-                                            </form>
+                                        <div>
+                                            <small class="text-muted">PM:</small>
+                                            <div>{{ client.project_manager if client.project_manager else 'N/A' }}</div>
                                         </div>
                                     </div>
                                 </div>
+                                <div class="col-md-2 text-end">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ client.id }}" aria-expanded="false" aria-controls="collapse-{{ client.id }}" title="Edit Client">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-client" data-id="{{ client.id }}" data-name="{{ client.name }}" title="Delete Client">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center py-4">
-                            <div class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i> No clients found.
-                                {% if current_user.role in ['Admin', 'Manager'] %}
-                                <a href="{{ url_for('clients.create_client') }}" class="ms-2">Add your first client</a>
-                                {% endif %}
+                        </div>
+                        
+                        <div id="collapse-{{ client.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ client.id }}" data-bs-parent="#clientsAccordion">
+                            <div class="accordion-body p-3">
+                                <form id="client-form-{{ client.id }}" class="client-form" data-client-id="{{ client.id }}">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="name-{{ client.id }}" class="form-label">Client Name</label>
+                                            <input type="text" class="form-control" id="name-{{ client.id }}" name="name" value="{{ client.name }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="address-{{ client.id }}" class="form-label">Address</label>
+                                            <input type="text" class="form-control" id="address-{{ client.id }}" name="address" value="{{ client.address or '' }}">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="city-{{ client.id }}" class="form-label">City</label>
+                                            <input type="text" class="form-control" id="city-{{ client.id }}" name="city" value="{{ client.city or '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="country_id-{{ client.id }}" class="form-label">Country</label>
+                                            <select class="form-select" id="country_id-{{ client.id }}" name="country_id">
+                                                <option value="">-- Select Country --</option>
+                                                {% for country in countries %}
+                                                <option value="{{ country.id }}" {% if client.country_id == country.id %}selected{% endif %}>
+                                                    {{ country.value }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="sales_person-{{ client.id }}" class="form-label">Sales Person</label>
+                                            <select class="form-select" id="sales_person-{{ client.id }}" name="sales_person">
+                                                <option value="">-- Select Sales Person --</option>
+                                                {% for person in sales_persons %}
+                                                <option value="{{ person.value }}" {% if client.sales_person == person.value %}selected{% endif %}>
+                                                    {{ person.value }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="project_manager-{{ client.id }}" class="form-label">Project Manager</label>
+                                            <select class="form-select" id="project_manager-{{ client.id }}" name="project_manager">
+                                                <option value="">-- Select Project Manager --</option>
+                                                {% for pm in project_managers %}
+                                                <option value="{{ pm.first_name }} {{ pm.last_name }}" {% if client.project_manager == pm.first_name ~ ' ' ~ pm.last_name %}selected{% endif %}>
+                                                    {{ pm.first_name }} {{ pm.last_name }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="industry-{{ client.id }}" class="form-label">Industry</label>
+                                            <select class="form-select" id="industry-{{ client.id }}" name="industry">
+                                                <option value="">-- Select Industry --</option>
+                                                {% for industry in industries %}
+                                                <option value="{{ industry.value }}" {% if client.industry == industry.value %}selected{% endif %}>
+                                                    {{ industry.value }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox" id="active-{{ client.id }}" name="active" {% if client.active %}checked{% endif %}>
+                                                <label class="form-check-label" for="active-{{ client.id }}">
+                                                    Active Client
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <button type="button" class="btn btn-primary save-client" data-client-id="{{ client.id }}">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info m-3">
+                    <i class="fas fa-info-circle"></i> No clients found.
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-    
-    <!-- Pagination -->
-    {% if pagination and pagination.pages > 1 %}
-    <div class="card-footer">
-        <nav aria-label="Client pagination">
-            <ul class="pagination justify-content-center mb-0">
-                {% if pagination.has_prev %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.prev_num, **request.args) }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-                
-                {% for page in pagination.iter_pages() %}
-                    {% if page %}
-                        {% if page == pagination.page %}
-                        <li class="page-item active"><a class="page-link" href="#">{{ page }}</a></li>
-                        {% else %}
-                        <li class="page-item"><a class="page-link" href="{{ url_for('clients.list_clients', page=page, **request.args) }}">{{ page }}</a></li>
-                        {% endif %}
-                    {% else %}
-                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if pagination.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.next_num, **request.args) }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
-    {% endif %}
 </div>
+
+<!-- Pagination -->
+{% if pagination and pagination.pages > 1 %}
+<div class="mt-4">
+    <nav aria-label="Client pagination">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.prev_num, search=request.args.get('search', ''), country=request.args.get('country', ''), status=request.args.get('status', '')) }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page in pagination.iter_pages() %}
+                {% if page %}
+                    {% if page == pagination.page %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ page }}</a></li>
+                    {% else %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('clients.list_clients', page=page, search=request.args.get('search', ''), country=request.args.get('country', ''), status=request.args.get('status', '')) }}">{{ page }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('clients.list_clients', page=pagination.next_num, search=request.args.get('search', ''), country=request.args.get('country', ''), status=request.args.get('status', '')) }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Delete Client Modal -->
+<div class="modal fade" id="deleteClientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the client "<span id="delete-client-name"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to show notification
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show`;
+            notification.setAttribute('role', 'alert');
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Add to the notification container
+            const container = document.querySelector('.container.mt-3');
+            container.appendChild(notification);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                const alert = bootstrap.Alert.getOrCreateInstance(notification);
+                alert.close();
+            }, 5000);
+        }
+        
+        // Delete client button click
+        const deleteButtons = document.querySelectorAll('.delete-client');
+        let clientIdToDelete = null;
+        let clientRowToDelete = null;
+        
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();  // Prevent accordion from toggling
+                clientIdToDelete = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                clientRowToDelete = this.closest('.accordion-item');
+                
+                // Populate modal
+                document.getElementById('delete-client-name').textContent = name;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteClientModal'));
+                modal.show();
+            });
+        });
+        
+        // Confirm delete button click
+        document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+            if (!clientIdToDelete) return;
+            
+            // Send AJAX request to delete client
+            fetch(`/clients/delete/${clientIdToDelete}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteClientModal'));
+                modal.hide();
+                
+                if (result.success) {
+                    // Show success message
+                    showNotification(result.message, 'success');
+                    
+                    // Remove the client row from the DOM
+                    if (clientRowToDelete) {
+                        clientRowToDelete.remove();
+                    }
+                    
+                    // Update client count
+                    const countElement = document.querySelector('.card-header h5.mb-0');
+                    if (countElement) {
+                        const currentText = countElement.textContent;
+                        const match = currentText.match(/Clients \((\d+)\)/);
+                        if (match && match[1]) {
+                            const newCount = parseInt(match[1]) - 1;
+                            countElement.textContent = `Clients (${newCount})`;
+                        }
+                    }
+                } else {
+                    // Show error message
+                    showNotification(result.message || 'Error deleting client', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error deleting client. Please try again.', 'danger');
+                
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteClientModal'));
+                modal.hide();
+            });
+        });
+        
+        // Save client button click
+        const saveButtons = document.querySelectorAll('.save-client');
+        saveButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const clientId = this.getAttribute('data-client-id');
+                const form = document.getElementById(`client-form-${clientId}`);
+                
+                // Get form data
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => {
+                    data[key] = value;
+                });
+                
+                // Send AJAX request
+                fetch(`/clients/edit/${clientId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Show success message
+                        showNotification(result.message, 'success');
+                        
+                        // Collapse the accordion
+                        const collapseElement = document.getElementById(`collapse-${clientId}`);
+                        const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
+                        if (bsCollapse) {
+                            bsCollapse.hide();
+                        }
+                        
+                        // Update the client row with new data without reloading
+                        const clientRow = document.querySelector(`#heading-${clientId} .row`);
+                        const nameElement = clientRow.querySelector('.col-md-3 strong');
+                        const locationElement = clientRow.querySelector('.col-md-3');
+                        const salesElement = clientRow.querySelector('.me-3 div');
+                        const pmElement = clientRow.querySelector('.col-md-4 .d-flex div:last-child div');
+                        
+                        // Update name
+                        nameElement.textContent = data.name;
+                        
+                        // Update active status badge
+                        let activeStatusBadge = clientRow.querySelector('.col-md-3 .badge');
+                        if (!activeStatusBadge) {
+                            activeStatusBadge = document.createElement('span');
+                            activeStatusBadge.className = 'badge ms-1';
+                            nameElement.parentNode.appendChild(activeStatusBadge);
+                        }
+                        
+                        if (data.active === 'on') {
+                            activeStatusBadge.className = 'badge bg-success ms-1';
+                            activeStatusBadge.textContent = 'Active';
+                        } else {
+                            activeStatusBadge.className = 'badge bg-secondary ms-1';
+                            activeStatusBadge.textContent = 'Inactive';
+                        }
+                        
+                        // Update location info
+                        let locationText = data.city || '';
+                        if (data.country_id) {
+                            const countrySelect = document.getElementById(`country_id-${clientId}`);
+                            const selectedOption = countrySelect.options[countrySelect.selectedIndex];
+                            if (selectedOption && data.city) {
+                                locationText += ', ' + selectedOption.text;
+                            } else if (selectedOption) {
+                                locationText = selectedOption.text;
+                            }
+                        }
+                        
+                        // Update industry
+                        let industryElement = locationElement.querySelector('small.text-muted');
+                        if (!industryElement && data.industry) {
+                            industryElement = document.createElement('div');
+                            const smallElement = document.createElement('small');
+                            smallElement.className = 'text-muted';
+                            smallElement.textContent = data.industry;
+                            industryElement.appendChild(smallElement);
+                            locationElement.appendChild(industryElement);
+                        } else if (industryElement && data.industry) {
+                            industryElement.textContent = data.industry;
+                        } else if (industryElement && !data.industry) {
+                            industryElement.remove();
+                        }
+                        
+                        // Set location text (first child node)
+                        locationElement.childNodes[0].nodeValue = locationText;
+                        
+                        // Update sales person
+                        salesElement.textContent = data.sales_person || 'N/A';
+                        
+                        // Update project manager
+                        pmElement.textContent = data.project_manager || 'N/A';
+                    } else {
+                        // Show error message
+                        showNotification(result.message || 'Error updating client', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error updating client. Please try again.', 'danger');
+                });
+            });
+        });
+    });
+</script>
 {% endblock %} 

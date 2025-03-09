@@ -54,14 +54,46 @@
                             </select>
                         </div>
                     </div>
-                    
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
-                            Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Changes
-                        </button>
+                    <div class="mb-3">
+                        <label for="sales_person" class="form-label">Sales Person</label>
+                        <select class="form-select" id="sales_person" name="sales_person">
+                            <option value="">-- Select Sales Person --</option>
+                            {% for person in sales_persons %}
+                            <option value="{{ person.value }}" {% if client.sales_person == person.value %}selected{% endif %}>
+                                {{ person.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="project_manager" class="form-label">Project Manager</label>
+                        <select class="form-select" id="project_manager" name="project_manager">
+                            <option value="">-- Select Project Manager --</option>
+                            {% for pm in project_managers %}
+                            <option value="{{ pm.first_name }} {{ pm.last_name }}" {% if client.project_manager == pm.first_name ~ ' ' ~ pm.last_name %}selected{% endif %}>
+                                {{ pm.first_name }} {{ pm.last_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="industry" class="form-label">Industry</label>
+                        <select class="form-select" id="industry" name="industry">
+                            <option value="">-- Select Industry --</option>
+                            {% for industry in industries %}
+                            <option value="{{ industry.value }}" {% if client.industry == industry.value %}selected{% endif %}>
+                                {{ industry.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="active" name="active" {% if client.active %}checked{% endif %}>
+                        <label class="form-check-label" for="active">Active Client</label>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('clients.list_clients') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Client</button>
                     </div>
                 </form>
             </div>
