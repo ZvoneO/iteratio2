@@ -23,7 +23,7 @@ class User(db.Model, UserMixin):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    consultants = db.relationship('Consultant', backref='user', lazy=True)
+    consultants = db.relationship('Consultant', backref='user', lazy=True, cascade="all, delete-orphan")
     roles = db.relationship('Role', secondary='user_roles', backref=db.backref('users', lazy=True))
     
     def __repr__(self):
@@ -313,6 +313,7 @@ class ProjectPhase(db.Model):
     description = db.Column(db.Text)
     duration_id = db.Column(db.Integer, db.ForeignKey('list_items.id'))
     online = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20), default='Not Started')  # Not Started, In Progress, Completed
     order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

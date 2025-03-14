@@ -271,7 +271,7 @@ def manage_user(user_id=None):
                 if password and password.strip():
                     user.password_hash = generate_password_hash(password)
                 
-                # Check if user is losing Consultant role
+                # Check if user is losing or gaining Consultant role
                 consultant_role = Role.query.filter_by(name='Consultant').first()
                 had_consultant_role = consultant_role in user.roles
                 will_have_consultant_role = 'Consultant' in role_names
@@ -288,6 +288,19 @@ def manage_user(user_id=None):
                     consultant = Consultant.query.filter_by(user_id=user.id).first()
                     if consultant:
                         db.session.delete(consultant)
+                        logger.info(f"Deleted consultant record for user: {username}")
+                
+                # If user gained Consultant role, create a consultant entry
+                if not had_consultant_role and will_have_consultant_role:
+                    consultant = Consultant.query.filter_by(user_id=user.id).first()
+                    if not consultant:
+                        consultant = Consultant(
+                            user_id=user.id,
+                            status='Active',
+                            availability_days_per_month=20  # Default value
+                        )
+                        db.session.add(consultant)
+                        logger.info(f"Created consultant record for existing user: {username}")
                         
                 logger.info(f"Updating existing user: {user.id} - {user.username}")
             else:
@@ -316,6 +329,21 @@ def manage_user(user_id=None):
                         user.roles.append(role)
                 
                 db.session.add(user)
+                db.session.flush()  # Flush to get the user ID
+                
+                # Check if user has Consultant role and create consultant record if needed
+                if 'Consultant' in role_names:
+                    # Create a consultant record if it doesn't exist
+                    consultant = Consultant.query.filter_by(user_id=user.id).first()
+                    if not consultant:
+                        consultant = Consultant(
+                            user_id=user.id,
+                            status='Active',
+                            availability_days_per_month=20  # Default value
+                        )
+                        db.session.add(consultant)
+                        logger.info(f"Created consultant record for new user: {username}")
+                
                 logger.info(f"Creating new user: {username}")
             
             db.session.commit()
@@ -350,6 +378,7 @@ def manage_user(user_id=None):
 def delete_user(user_id):
     """
     Handle user deletion.
+    The cascade delete in the User model will automatically delete associated consultant records.
     """
     # Check if this is an AJAX request
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -369,6 +398,13 @@ def delete_user(user_id):
     try:
         user = User.query.get_or_404(user_id)
         username = user.username  # Store for logging
+        
+        # Check if user has consultant record (for logging purposes)
+        has_consultant = Consultant.query.filter_by(user_id=user_id).first() is not None
+        if has_consultant:
+            logger.info(f"User {username} (ID: {user_id}) has a consultant record that will be deleted via cascade")
+        
+        # Delete the user (consultant will be deleted via cascade)
         db.session.delete(user)
         db.session.commit()
         

@@ -1,9 +1,10 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 import os
 from datetime import datetime
+from markupsafe import Markup
 
 from .models import db
 
@@ -57,30 +58,32 @@ def create_app(config_class=None):
         """Add current date to all templates."""
         return {'now': datetime.utcnow()}
     
+    # Register custom filters
+    @app.template_filter('nl2br')
+    def nl2br_filter(text):
+        if not text:
+            return ""
+        return Markup(text.replace('\n', '<br>'))
+    
     # Register blueprints
-    from .routes.admin import admin_bp
-    from .routes.projects import projects_bp
-    from .routes.clients import clients_bp
-    from .routes.catalog import catalog_bp
-    from .routes.consultants import consultants_bp
-    
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(projects_bp)
-    app.register_blueprint(clients_bp)
-    app.register_blueprint(catalog_bp)
-    app.register_blueprint(consultants_bp)
-    
-    # Create auth blueprint for login/logout
-    from .routes.auth import auth_bp
+    from .routes import auth_bp, admin_bp, clients_bp, projects_bp, consultants_bp, catalog_bp
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(clients_bp)
+    app.register_blueprint(projects_bp)
+    app.register_blueprint(consultants_bp)
+    app.register_blueprint(catalog_bp)
     
-    # Create a simple index route
+    # Add health check endpoint for Render
+    @app.route('/health')
+    def health_check():
+        return jsonify({"status": "healthy"}), 200
+    
+    # Add a root route that redirects to the dashboard
     @app.route('/')
     def index():
-        # If user is logged in, redirect to dashboard
         if current_user.is_authenticated:
             return redirect(url_for('admin.dashboard'))
-        # Otherwise redirect to login page
         return redirect(url_for('auth.login'))
     
     return app

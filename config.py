@@ -18,10 +18,25 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app/static/uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
 
+    @staticmethod
+    def get_database_url():
+        """
+        Get database URL from environment and fix it if needed.
+        Render provides PostgreSQL URLs starting with postgres://, but SQLAlchemy requires postgresql://
+        """
+        database_url = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+        # Fix for Render PostgreSQL URLs
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return database_url
+
 class DevelopmentConfig(Config):
     """Development configuration with debugging enabled."""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        return self.get_database_url()
 
 class TestingConfig(Config):
     """Testing configuration with testing database."""
@@ -32,7 +47,10 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Production configuration with secure settings."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        return self.get_database_url()
     
     # In production, ensure SECRET_KEY is set in environment
     SECRET_KEY = os.environ.get('SECRET_KEY')

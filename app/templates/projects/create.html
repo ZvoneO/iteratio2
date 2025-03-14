@@ -106,12 +106,37 @@
                             <input type="text" class="form-control" id="client_search" placeholder="Search for a client..." autocomplete="off">
                             <div id="client_results" class="dropdown-results position-absolute w-100 mt-1 shadow-sm" style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto; background-color: white; border: 1px solid #dee2e6; border-radius: 0.25rem;"></div>
                             <input type="hidden" id="client_id" name="client_id" required>
+                            <div id="client_not_found" class="text-danger mt-1" style="display: none;">
+                                Client not found. <a href="{{ url_for('clients.create_client') }}" target="_blank">Create a new client</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Second Row: Manager, Dates -->
+            <!-- Client Details Row -->
+            <div class="row mb-3" id="client_details_row" style="display: none;">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <p class="form-control-static" id="client_address">-</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <p class="form-control-static" id="client_city">-</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Country</label>
+                        <p class="form-control-static" id="client_country">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Row: Manager, Sales, Dates -->
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="form-group">
@@ -126,21 +151,30 @@
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
+                        <label for="sales_person" class="form-label">Sales Person</label>
+                        <select class="form-select" id="sales_person" name="sales_person">
+                            <option value="">Select sales person</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date">
                     </div>
                 </div>
-                <div class="col-md-4">
+            </div>
+
+            <!-- Third Row: End Date, Industry, Profit Center -->
+            <div class="row">
+                <div class="col-md-3">
                     <div class="form-group">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date">
                     </div>
                 </div>
-            </div>
-
-            <!-- Third Row: Industry, Profit Center -->
-            <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <div class="form-group">
                         <label for="industry_id" class="form-label">Industry</label>
                         <select class="form-select" id="industry_id" name="industry_id">
@@ -151,13 +185,24 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <div class="form-group">
                         <label for="profit_center_id" class="form-label">Profit Center</label>
                         <select class="form-select" id="profit_center_id" name="profit_center_id">
                             <option value="">Select profit center</option>
                             {% for center in profit_centers %}
                             <option value="{{ center.id }}">{{ center.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="status_id" class="form-label">Project Status</label>
+                        <select class="form-select" id="status_id" name="status_id">
+                            <option value="">Select status</option>
+                            {% for status in project_statuses %}
+                            <option value="{{ status.id }}">{{ status.value }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -209,8 +254,12 @@
         const clientSearchInput = document.getElementById('client_search');
         const clientResultsDiv = document.getElementById('client_results');
         const clientIdInput = document.getElementById('client_id');
-        const clientLocation = document.getElementById('client_location');
-        const clientSales = document.getElementById('client_sales');
+        const clientDetailsRow = document.getElementById('client_details_row');
+        const clientAddress = document.getElementById('client_address');
+        const clientCity = document.getElementById('client_city');
+        const clientCountry = document.getElementById('client_country');
+        const salesPersonSelect = document.getElementById('sales_person');
+        const managerIdSelect = document.getElementById('manager_id');
         const clientNotFoundDiv = document.getElementById('client_not_found');
         
         let searchTimeout;
@@ -238,7 +287,7 @@
                         // Clear previous results
                         clientResultsDiv.innerHTML = '';
                         
-                        if (data.length === 0) {
+                        if (!data.clients || data.clients.length === 0) {
                             clientNotFoundDiv.style.display = 'block';
                             clientResultsDiv.style.display = 'none';
                             return;
@@ -247,7 +296,7 @@
                         clientNotFoundDiv.style.display = 'none';
                         
                         // Add results to dropdown
-                        data.forEach(client => {
+                        data.clients.forEach(client => {
                             const resultItem = document.createElement('div');
                             resultItem.className = 'p-2 border-bottom client-result';
                             resultItem.style.cursor = 'pointer';
@@ -258,7 +307,7 @@
                             
                             // Add click event to select client
                             resultItem.addEventListener('click', () => {
-                                selectClient(client);
+                                selectClient(client, data.sales_items, data.project_managers);
                             });
                             
                             clientResultsDiv.appendChild(resultItem);
@@ -274,77 +323,105 @@
         }
         
         // Function to select a client
-        function selectClient(client) {
+        function selectClient(client, salesItems, projectManagers) {
             selectedClient = client;
             
             // Update input values
             clientSearchInput.value = client.name;
             clientIdInput.value = client.id;
             
-            // Update client info
-            let locationText = '';
-            if (client.city && client.country) {
-                locationText = `${client.city}, ${client.country}`;
-            } else if (client.city) {
-                locationText = client.city;
-            } else if (client.country) {
-                locationText = client.country;
-            } else {
-                locationText = 'No location information';
-            }
+            // Update client details
+            clientAddress.textContent = client.address || '-';
+            clientCity.textContent = client.city || '-';
+            clientCountry.textContent = client.country || '-';
+            clientDetailsRow.style.display = 'flex';
             
-            clientLocation.textContent = locationText;
+            // Populate sales person dropdown
+            populateSalesDropdown(salesItems, client.sales_person);
             
-            let salesText = '';
-            if (client.sales_person) {
-                salesText = `Sales: ${client.sales_person}`;
-                if (client.project_manager) {
-                    salesText += ` | PM: ${client.project_manager}`;
+            // Pre-select project manager if available
+            if (client.project_manager && projectManagers) {
+                const matchingManager = projectManagers.find(pm => 
+                    `${pm.name}` === client.project_manager
+                );
+                
+                if (matchingManager) {
+                    managerIdSelect.value = matchingManager.id;
                 }
-            } else if (client.project_manager) {
-                salesText = `PM: ${client.project_manager}`;
             }
-            
-            clientSales.textContent = salesText;
             
             // Hide results dropdown
             clientResultsDiv.style.display = 'none';
             clientNotFoundDiv.style.display = 'none';
         }
         
+        // Function to populate sales dropdown
+        function populateSalesDropdown(salesItems, selectedSalesPerson) {
+            // Clear existing options except the first one
+            while (salesPersonSelect.options.length > 1) {
+                salesPersonSelect.remove(1);
+            }
+            
+            // Add new options
+            if (salesItems && salesItems.length > 0) {
+                salesItems.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.value;
+                    option.textContent = item.value;
+                    
+                    if (selectedSalesPerson === item.value) {
+                        option.selected = true;
+                    }
+                    
+                    salesPersonSelect.appendChild(option);
+                });
+            }
+        }
+        
         // Add event listener for input changes
         clientSearchInput.addEventListener('input', function() {
             const query = this.value.trim();
-            searchClients(query);
             
-            // Clear selected client if input is empty
+            // If input is cleared, reset the client
             if (query === '') {
                 clientIdInput.value = '';
-                clientLocation.textContent = 'Select a client to see details';
-                clientSales.textContent = '';
                 selectedClient = null;
-            }
-        });
-        
-        // Add event listener for focus
-        clientSearchInput.addEventListener('focus', function() {
-            const query = this.value.trim();
-            if (query.length >= 2) {
+                clientDetailsRow.style.display = 'none';
+                clientResultsDiv.style.display = 'none';
+                clientNotFoundDiv.style.display = 'none';
+            } else {
                 searchClients(query);
             }
         });
         
-        // Close dropdown when clicking outside
+        // Add event listener to hide dropdown when clicking outside
         document.addEventListener('click', function(event) {
             if (!clientSearchInput.contains(event.target) && !clientResultsDiv.contains(event.target)) {
                 clientResultsDiv.style.display = 'none';
                 
-                // If no client is selected and input is not empty, show not found message
+                // If no client is selected and search input has text, reset it
                 if (!selectedClient && clientSearchInput.value.trim() !== '') {
-                    clientNotFoundDiv.style.display = 'block';
+                    clientSearchInput.value = '';
+                    clientIdInput.value = '';
+                    clientDetailsRow.style.display = 'none';
+                    clientNotFoundDiv.style.display = 'none';
                 }
             }
         });
+        
+        // If client_id is already set (e.g., when editing), fetch client details
+        if (clientIdInput.value) {
+            fetch(`/clients/get/${clientIdInput.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.client) {
+                        selectClient(data.client, data.sales_items, data.project_managers);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching client details:', error);
+                });
+        }
         
         // Project Groups and Phases Management
         const groupsContainer = document.getElementById('project-groups-container');

@@ -158,112 +158,141 @@ def create_project():
             print(f"DEBUG - Status: {status.id} - {status.value}")
     
     if request.method == 'POST':
-        # Get form data
-        name = request.form.get('name')
-        description = request.form.get('description')
-        client_id = request.form.get('client_id')
-        manager_id = request.form.get('manager_id')
-        template_id = request.form.get('template_id')
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        industry_id = request.form.get('industry_id')
-        profit_center_id = request.form.get('profit_center_id')
-        
-        # Get status_id from form
-        status_id = request.form.get('status_id')
-        
-        # Set default status to "Preparation" if not provided
-        if not status_id and project_statuses:
-            # Find the "Preparation" status
-            preparation_status = next((s for s in project_statuses if s.value == "Preparation"), None)
-            if preparation_status:
-                status_id = preparation_status.id
-        
-        # Get the status value from the status_id
-        status_value = None
-        if status_id:
-            status_item = ListItem.query.get(status_id)
-            if status_item:
-                status_value = status_item.value
-        
-        # If no status_value was found, default to "Preparation"
-        if not status_value:
-            status_value = "Preparation"
-        
-        # Validate form data
-        if not name or not client_id or not manager_id:
-            flash('All required fields must be filled.', 'danger')
-            return redirect(url_for('projects.create_project'))
-        
-        # Validate dates
-        if start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-            if start_date_obj > end_date_obj:
-                flash('End date must be after start date.', 'danger')
+        try:
+            # Get form data
+            name = request.form.get('name')
+            description = request.form.get('description')
+            client_id = request.form.get('client_id')
+            manager_id = request.form.get('manager_id')
+            template_id = request.form.get('template_id')
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+            industry_id = request.form.get('industry_id') if request.form.get('industry_id') else None
+            profit_center_id = request.form.get('profit_center_id') if request.form.get('profit_center_id') else None
+            
+            # Get status_id from form
+            status_id = request.form.get('status_id')
+            
+            # Debug print
+            print(f"DEBUG - Form data received:")
+            print(f"DEBUG - name: {name}")
+            print(f"DEBUG - client_id: {client_id}")
+            print(f"DEBUG - manager_id: {manager_id}")
+            print(f"DEBUG - status_id: {status_id}")
+            
+            # Set default status to "Preparation" if not provided
+            if not status_id and project_statuses:
+                # Find the "Preparation" status
+                preparation_status = next((s for s in project_statuses if s.value == "Preparation"), None)
+                if preparation_status:
+                    status_id = preparation_status.id
+                    print(f"DEBUG - Using default status_id: {status_id}")
+            
+            # Get the status value from the status_id
+            status_value = None
+            if status_id:
+                status_item = ListItem.query.get(status_id)
+                if status_item:
+                    status_value = status_item.value
+                    print(f"DEBUG - Found status_value: {status_value}")
+            
+            # If no status_value was found, default to "Preparation"
+            if not status_value:
+                status_value = "Preparation"
+                print(f"DEBUG - Using default status_value: {status_value}")
+            
+            # Validate form data
+            if not name or not client_id or not manager_id:
+                flash('All required fields must be filled.', 'danger')
                 return redirect(url_for('projects.create_project'))
-        
-        # Create new project
-        new_project = Project(
-            name=name,
-            description=description,
-            client_id=client_id,
-            manager_id=manager_id,
-            template_id=template_id if template_id else None,
-            start_date=start_date if start_date else None,
-            end_date=end_date if end_date else None,
-            status=status_value,
-            status_id=status_id,
-            industry_id=industry_id if industry_id else None,
-            profit_center_id=profit_center_id if profit_center_id else None
-        )
-        
-        # Add project to database
-        db.session.add(new_project)
-        db.session.commit()
-        
-        # If template was selected, copy products from template to project
-        if template_id:
-            template = ProjectTemplate.query.get(template_id)
-            if template and template.products:
-                for product in template.products:
-                    new_project.products.append(product)
-                db.session.commit()
-        
-        # Process project groups and phases if submitted
-        if 'group_data' in request.form:
-            try:
-                group_data = json.loads(request.form.get('group_data'))
-                for group_idx, group in enumerate(group_data):
-                    # Create project group
-                    new_group = ProjectGroup(
-                        project_id=new_project.id,
-                        product_group_id=group['product_group_id'],
-                        order=group_idx
-                    )
-                    db.session.add(new_group)
-                    db.session.flush()  # Get the new group ID
+            
+            # Validate dates
+            if start_date and end_date:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                if start_date_obj > end_date_obj:
+                    flash('End date must be after start date.', 'danger')
+                    return redirect(url_for('projects.create_project'))
+            else:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+            
+            # Create new project
+            new_project = Project(
+                name=name,
+                description=description,
+                client_id=client_id,
+                manager_id=manager_id,
+                template_id=template_id if template_id else None,
+                start_date=start_date_obj,
+                end_date=end_date_obj,
+                status=status_value,
+                status_id=status_id,
+                industry_id=industry_id,
+                profit_center_id=profit_center_id
+            )
+            
+            # Add project to database
+            db.session.add(new_project)
+            db.session.commit()
+            print(f"DEBUG - Project created with ID: {new_project.id}")
+            
+            # If template was selected, copy products from template to project
+            if template_id:
+                template = ProjectTemplate.query.get(template_id)
+                if template and template.products:
+                    for product in template.products:
+                        new_project.products.append(product)
+                    db.session.commit()
+            
+            # Process project groups and phases if submitted
+            if 'group_data' in request.form:
+                try:
+                    group_data = json.loads(request.form.get('group_data'))
+                    print(f"DEBUG - Processing {len(group_data)} groups")
                     
-                    # Create phases for this group
-                    for phase_idx, phase in enumerate(group['phases']):
-                        new_phase = ProjectPhase(
-                            group_id=new_group.id,
-                            name=phase['name'],
-                            description=phase.get('description', ''),
-                            duration_id=phase.get('duration_id'),
-                            online=phase.get('online', False),
-                            order=phase_idx
+                    for group_idx, group in enumerate(group_data):
+                        # Create project group
+                        new_group = ProjectGroup(
+                            project_id=new_project.id,
+                            product_group_id=group['product_group_id'],
+                            order=group_idx
                         )
-                        db.session.add(new_phase)
-                
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Error processing project structure: {str(e)}', 'danger')
-                return redirect(url_for('projects.edit_project', project_id=new_project.id))
+                        db.session.add(new_group)
+                        db.session.flush()  # Get the new group ID
+                        
+                        # Create phases for this group
+                        for phase_idx, phase in enumerate(group['phases']):
+                            new_phase = ProjectPhase(
+                                group_id=new_group.id,
+                                name=phase['name'],
+                                description=phase.get('description', ''),
+                                duration_id=phase.get('duration_id'),
+                                online=phase.get('online', False),
+                                order=phase_idx
+                            )
+                            db.session.add(new_phase)
+                    
+                    db.session.commit()
+                    print(f"DEBUG - Project structure processed successfully")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"DEBUG - Error processing project structure: {str(e)}")
+                    import traceback
+                    print(traceback.format_exc())
+                    flash(f'Error processing project structure: {str(e)}', 'danger')
+                    return redirect(url_for('projects.edit_project', project_id=new_project.id))
+            
+            flash('Project created successfully!', 'success')
+            return redirect(url_for('projects.view_project', project_id=new_project.id))
         
-        flash('Project created successfully!', 'success')
-        return redirect(url_for('projects.view_project', project_id=new_project.id))
+        except Exception as e:
+            db.session.rollback()
+            print(f"DEBUG - Error creating project: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            flash(f'Error creating project: {str(e)}', 'danger')
+            return redirect(url_for('projects.create_project'))
     
     return render_template(
         'projects/create.html', 
@@ -332,8 +361,6 @@ def edit_project(project_id):
         project.description = request.form.get('description')
         project.client_id = request.form.get('client_id')
         project.manager_id = request.form.get('manager_id')
-        project.start_date = request.form.get('start_date') if request.form.get('start_date') else None
-        project.end_date = request.form.get('end_date') if request.form.get('end_date') else None
         project.industry_id = request.form.get('industry_id') if request.form.get('industry_id') else None
         project.profit_center_id = request.form.get('profit_center_id') if request.form.get('profit_center_id') else None
         
@@ -367,6 +394,20 @@ def edit_project(project_id):
             if project.start_date > project.end_date:
                 flash('End date must be after start date.', 'danger')
                 return redirect(url_for('projects.edit_project', project_id=project_id))
+        
+        # Convert string dates to Python date objects
+        start_date = request.form.get('start_date')
+        end_date = request.form.get('end_date')
+        
+        if start_date:
+            project.start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        else:
+            project.start_date = None
+            
+        if end_date:
+            project.end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        else:
+            project.end_date = None
         
         # Process project groups and phases if submitted
         if 'group_data' in request.form:

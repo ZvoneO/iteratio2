@@ -341,3 +341,42 @@ AttributeError: 'ProductElement' object has no attribute 'name'
 2025-03-08 17:30:46,179 - consultants - INFO - Updating expertise for consultant 8: {'consultant_id': '8', 'expertise_type': 'product_element', 'item_id': '12', 'rating': 5, 'notes': ''}
 2025-03-08 17:30:46,180 - consultants - INFO - Creating new expertise for ALP II - 4 (ALP II) (ID: 12) with rating 5
 2025-03-08 17:30:46,182 - consultants - INFO - Expertise set to 5 stars for ALP II - 4 (ALP II)
+2025-03-11 08:50:18,801 - consultants - INFO - Updating consultant 2 with data: {'status': 'Active', 'availability_days': '0', 'calendar_name': '', 'notes': ''}
+2025-03-11 08:50:18,801 - consultants - INFO - No changes detected for consultant 2
+2025-03-11 08:50:18,811 - consultants - INFO - Updating expertise for consultant 2: {'consultant_id': '2', 'expertise_type': 'product_group', 'item_id': '1', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:18,813 - consultants - INFO - Updating expertise for consultant 2: {'consultant_id': '2', 'expertise_type': 'product_element', 'item_id': '2', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:18,814 - consultants - INFO - Updating expertise for consultant 2: {'consultant_id': '2', 'expertise_type': 'product_element', 'item_id': '4', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:18,815 - consultants - INFO - Updating expertise for consultant 2: {'consultant_id': '2', 'expertise_type': 'product_element', 'item_id': '1', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:18,816 - consultants - INFO - Updating expertise for ALP I (ID: 1) to rating 5
+2025-03-11 08:50:18,822 - consultants - INFO - Expertise set to 5 stars for ALP I
+2025-03-11 08:50:18,824 - consultants - INFO - Updating expertise for ALP I - 2 (ALP I) (ID: 2) to rating 5
+2025-03-11 08:50:18,825 - consultants - INFO - Creating new expertise for ALP I - 4 (ALP I) (ID: 4) with rating 5
+2025-03-11 08:50:18,826 - consultants - INFO - Updating expertise for ALP I - 1 (ALP I) (ID: 1) to rating 5
+2025-03-11 08:50:18,828 - consultants - INFO - Expertise set to 5 stars for ALP I - 2 (ALP I)
+2025-03-11 08:50:18,829 - consultants - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-11 08:50:18,831 - consultants - INFO - Expertise set to 5 stars for ALP I - 4 (ALP I)
+2025-03-11 08:50:30,531 - consultants - INFO - Updating consultant 5 with data: {'status': 'Active', 'availability_days': '0', 'calendar_name': '', 'notes': ''}
+2025-03-11 08:50:30,531 - consultants - INFO - No changes detected for consultant 5
+2025-03-11 08:50:30,536 - consultants - INFO - Updating expertise for consultant 5: {'consultant_id': '5', 'expertise_type': 'product_element', 'item_id': '1', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:30,537 - consultants - INFO - Updating expertise for consultant 5: {'consultant_id': '5', 'expertise_type': 'product_element', 'item_id': '14', 'rating': 5, 'notes': ''}
+2025-03-11 08:50:30,539 - consultants - INFO - Creating new expertise for ALP I - 1 (ALP I) (ID: 1) with rating 5
+2025-03-11 08:50:30,539 - consultants - INFO - Updating expertise for ALP II - 6 (ALP II) (ID: 14) to rating 5
+2025-03-11 08:50:30,543 - consultants - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-11 08:50:30,544 - consultants - INFO - Expertise set to 5 stars for ALP II - 6 (ALP II)
+2025-03-11 09:15:15,879 - consultants - INFO - Updating consultant 3 with data: {'status': 'Active', 'availability_days': '0', 'calendar_name': '', 'notes': ''}
+2025-03-11 09:15:15,880 - consultants - INFO - No changes detected for consultant 3
+2025-03-11 09:15:15,887 - consultants - INFO - Updating expertise for consultant 3: {'consultant_id': '3', 'expertise_type': 'product_group', 'item_id': '1', 'rating': 4, 'notes': ''}
+2025-03-11 09:15:15,888 - consultants - INFO - Updating expertise for consultant 3: {'consultant_id': '3', 'expertise_type': 'product_element', 'item_id': '1', 'rating': 5, 'notes': ''}
+2025-03-11 09:15:15,892 - consultants - INFO - Creating new expertise for ALP I (ID: 1) with rating 4
+2025-03-11 09:15:15,895 - consultants - INFO - Updating expertise for ALP I - 1 (ALP I) (ID: 1) to rating 5
+2025-03-11 09:15:15,897 - consultants - INFO - Expertise set to 4 stars for ALP I
+2025-03-11 09:15:15,899 - consultants - INFO - Expertise set to 5 stars for ALP I - 1 (ALP I)
+2025-03-11 09:15:40,728 - consultants - INFO - Updating consultant 10 with data: {'status': 'Active', 'availability_days': '10', 'calendar_name': '', 'notes': ''}
+2025-03-11 09:15:40,729 - consultants - INFO - Updating availability from 0 to 10
+2025-03-11 09:15:40,731 - consultants - INFO - Consultant 10 updated successfully
+2025-03-11 09:15:51,527 - consultants - INFO - Updating consultant 11 with data: {'status': 'Active', 'availability_days': '10', 'calendar_name': '', 'notes': ''}
+2025-03-11 09:15:51,528 - consultants - INFO - Updating availability from 0 to 10
+2025-03-11 09:15:51,531 - consultants - INFO - Consultant 11 updated successfully
+2025-03-11 09:16:04,601 - consultants - INFO - Updating consultant 12 with data: {'status': 'Active', 'availability_days': '12', 'calendar_name': '', 'notes': ''}
+2025-03-11 09:16:04,602 - consultants - INFO - Updating availability from 0 to 12
+2025-03-11 09:16:04,605 - consultants - INFO - Consultant 12 updated successfully

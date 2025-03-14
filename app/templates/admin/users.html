@@ -86,7 +86,7 @@
                                 </div>
                                 <div class="col-md-3">
                                     {% for role in user.roles %}
-                                    <span class="badge bg-info me-1">{{ role.name }}</span>
+                                    <span class="badge role-badge role-{{ role.name|lower|replace(' ', '-') }} me-1">{{ role.name }}</span>
                                     {% endfor %}
                                 </div>
                                 <div class="col-md-2 text-end">
@@ -167,17 +167,23 @@
                 
                 <!-- New User Form (Initially Hidden) -->
                 <div id="new-user-form-container" class="p-3 border-bottom" style="display: none;">
-                    <form id="new-user-form" class="user-create-form">
+                    <form id="new-user-form" class="user-create-form needs-validation" novalidate>
                         <h5 class="mb-3">Add New User</h5>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="new-username" class="form-label">Username*</label>
                                     <input type="text" class="form-control form-control-sm" id="new-username" name="username" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a username.
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="new-email" class="form-label">Email*</label>
                                     <input type="email" class="form-control form-control-sm" id="new-email" name="email" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a valid email address.
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="new-first_name" class="form-label">First Name</label>
@@ -194,17 +200,23 @@
                                     <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                                         {% for role in roles %}
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="roles[]" value="{{ role.name }}" id="new_role_{{ role.id }}">
+                                            <input class="form-check-input role-checkbox" type="checkbox" name="roles[]" value="{{ role.name }}" id="new_role_{{ role.id }}">
                                             <label class="form-check-label" for="new_role_{{ role.id }}">
                                                 {{ role.name }}
                                             </label>
                                         </div>
                                         {% endfor %}
                                     </div>
+                                    <div class="text-danger mt-1 role-validation-message" style="display: none;">
+                                        Please select at least one role.
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="new-password" class="form-label">Password*</label>
                                     <input type="password" class="form-control form-control-sm" id="new-password" name="password" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a password.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -290,6 +302,49 @@
     
     .accordion-button:not(.collapsed) {
         background-color: rgba(0, 0, 0, 0.03);
+    }
+    
+    /* Custom role badge styles */
+    .badge.role-badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+    
+    .badge.role-badge.role-admin {
+        background-color: #d63384; /* Vibrant pink */
+        color: white;
+    }
+    
+    .badge.role-badge.role-manager {
+        background-color: #6f42c1; /* Purple */
+        color: white;
+    }
+    
+    .badge.role-badge.role-project-manager {
+        background-color: #0d6efd; /* Bright blue */
+        color: white;
+    }
+    
+    .badge.role-badge.role-consultant {
+        background-color: #198754; /* Green */
+        color: white;
+    }
+    
+    .badge.role-badge.role-client {
+        background-color: #fd7e14; /* Orange */
+        color: white;
+    }
+    
+    .badge.role-badge.role-user {
+        background-color: #6c757d; /* Gray */
+        color: white;
+    }
+    
+    /* Default for any other roles */
+    .badge.role-badge.role-default {
+        background-color: #20c997; /* Teal */
+        color: white;
     }
 </style>
 
@@ -425,9 +480,21 @@
         createUserBtn.addEventListener('click', function() {
             const form = document.getElementById('new-user-form');
             
+            // Check if at least one role is selected
+            const roleCheckboxes = form.querySelectorAll('.role-checkbox:checked');
+            const roleValidationMessage = form.querySelector('.role-validation-message');
+            
+            if (roleCheckboxes.length === 0) {
+                roleValidationMessage.style.display = 'block';
+                return;
+            } else {
+                roleValidationMessage.style.display = 'none';
+            }
+            
             // Validate form
             if (!form.checkValidity()) {
-                form.reportValidity();
+                // Trigger browser's built-in validation
+                form.classList.add('was-validated');
                 return;
             }
             
@@ -447,6 +514,9 @@
                 is_active: true
             };
             
+            // Log the data being sent (for debugging)
+            console.log('Sending user data:', JSON.stringify(userData));
+            
             // Send request to create user
             fetch('/admin/users/create', {
                 method: 'POST',
@@ -457,6 +527,7 @@
                 body: JSON.stringify(userData)
             })
             .then(response => {
+                console.log('Response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
@@ -467,9 +538,14 @@
                 this.disabled = false;
                 this.innerHTML = '<i class="fas fa-save"></i> Create User';
                 
+                console.log('Response data:', data);
+                
                 if (data.success) {
                     showNotification('User created successfully');
-                    window.location.reload();
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
                     // Show detailed error message
                     let errorMessage = data.message || 'Error creating user';
@@ -487,6 +563,20 @@
                 
                 console.error('Error:', error);
                 showNotification(`Error creating user: ${error.message}. Check console for details.`, 'danger');
+            });
+        });
+        
+        // Add event listeners to role checkboxes
+        const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+        const roleValidationMessage = document.querySelector('.role-validation-message');
+        
+        roleCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Check if at least one role is selected
+                const checkedRoles = document.querySelectorAll('.role-checkbox:checked');
+                if (checkedRoles.length > 0) {
+                    roleValidationMessage.style.display = 'none';
+                }
             });
         });
         

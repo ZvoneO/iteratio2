@@ -40,7 +40,7 @@ def list_clients():
     per_page = 20  # Show 20 clients per page
     
     # Base query
-    query = Client.query
+    query = Client.query.options(db.joinedload(Client.country))
     
     # Apply filters
     if search:
@@ -67,12 +67,16 @@ def list_clients():
         # Other users don't see any clients
         filtered_query = query.filter(Client.id == None)  # Empty result
     
-    # Order by name
-    filtered_query = filtered_query.order_by(Client.name)
+    # Order by name and ensure fresh data
+    filtered_query = filtered_query.order_by(Client.name).execution_options(synchronize_session="fetch")
     
     # Paginate the results
     pagination = filtered_query.paginate(page=page, per_page=per_page, error_out=False)
     clients = pagination.items
+    
+    # Debug log to verify client active status
+    for client in clients:
+        print(f"Client {client.id} - {client.name} - Active: {client.active}")
     
     # Get countries list for dropdown
     countries_list = List.query.filter_by(name='Countries').first()
@@ -216,11 +220,23 @@ def edit_client(client_id):
             client.sales_person = data.get('sales_person')
             client.project_manager = data.get('project_manager')
             client.industry = data.get('industry')
-            client.active = data.get('active', True)
+            
+            # Fix for active status - properly convert to boolean
+            active_value = data.get('active')
+            client.active = bool(active_value) if active_value is not None else True
+            
+            # Log the update for debugging
+            print(f"AJAX updating client {client.id} - Active status: {client.active}, Raw value: {active_value}")
             
             try:
                 # Save to database
+                db.session.flush()  # Flush changes to the database
                 db.session.commit()
+                
+                # Refresh the client object to ensure it reflects the latest changes
+                db.session.refresh(client)
+                print(f"After AJAX commit - Client {client.id} active status: {client.active}")
+                
                 return json.dumps({'success': True, 'message': 'Client updated successfully!'})
             except Exception as e:
                 db.session.rollback()
@@ -234,13 +250,28 @@ def edit_client(client_id):
             client.sales_person = request.form.get('sales_person')
             client.project_manager = request.form.get('project_manager')
             client.industry = request.form.get('industry')
-            client.active = request.form.get('active') == 'on'
             
-            # Save to database
-            db.session.commit()
+            # Fix for active status - properly convert checkbox value to boolean
+            client.active = 'active' in request.form and request.form.get('active') == 'on'
             
-            flash('Client updated successfully!', 'success')
-            return redirect(url_for('clients.list_clients'))
+            # Log the update for debugging
+            print(f"Updating client {client.id} - Active status: {client.active}")
+            
+            try:
+                # Save to database
+                db.session.flush()  # Flush changes to the database
+                db.session.commit()
+                
+                # Refresh the client object to ensure it reflects the latest changes
+                db.session.refresh(client)
+                print(f"After commit - Client {client.id} active status: {client.active}")
+                
+                flash('Client updated successfully!', 'success')
+                return redirect(url_for('clients.list_clients'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating client: {str(e)}', 'danger')
+                return redirect(url_for('clients.edit_client', client_id=client.id))
     
     return render_template('clients/edit.html', 
                           client=client, 
@@ -384,20 +415,89 @@ def search_clients():
     # Search for clients matching the query
     clients = Client.query.filter(Client.name.ilike(f'%{query}%')).limit(7).all()
     
+    # Get sales list
+    sales_list = List.query.filter_by(name='Sales').first()
+    sales_items = []
+    if sales_list:
+        sales_items = ListItem.query.filter_by(list_id=sales_list.id).all()
+        sales_items = [{'id': item.id, 'value': item.value} for item in sales_items]
+    
+    # Get project managers (users with Project Manager role)
+    pm_role = Role.query.filter_by(name='Project Manager').first()
+    project_managers = []
+    if pm_role:
+        project_managers = [{'id': user.id, 'name': f"{user.first_name} {user.last_name}"} for user in pm_role.users]
+    
     # Format the results
     results = []
     for client in clients:
         client_data = {
             'id': client.id,
             'name': client.name,
+            'address': client.address or '',
             'city': client.city or '',
+            'country_id': client.country_id,
             'country': client.country.value if client.country else '',
             'sales_person': client.sales_person or '',
-            'project_manager': client.project_manager or ''
+            'project_manager': client.project_manager or '',
+            'industry': client.industry or '',
+            'active': client.active
         }
         results.append(client_data)
     
-    return jsonify(results)
+    # Return client data along with sales and project manager options
+    response = {
+        'clients': results,
+        'sales_items': sales_items,
+        'project_managers': project_managers
+    }
+    
+    return jsonify(response)
+
+@clients_bp.route('/get/<int:client_id>', methods=['GET'])
+@login_required
+def get_client(client_id):
+    """
+    Get detailed information for a specific client.
+    Returns JSON with client details.
+    """
+    client = Client.query.get_or_404(client_id)
+    
+    # Get sales list
+    sales_list = List.query.filter_by(name='Sales').first()
+    sales_items = []
+    if sales_list:
+        sales_items = ListItem.query.filter_by(list_id=sales_list.id).all()
+        sales_items = [{'id': item.id, 'value': item.value} for item in sales_items]
+    
+    # Get project managers (users with Project Manager role)
+    pm_role = Role.query.filter_by(name='Project Manager').first()
+    project_managers = []
+    if pm_role:
+        project_managers = [{'id': user.id, 'name': f"{user.first_name} {user.last_name}"} for user in pm_role.users]
+    
+    # Format the client data
+    client_data = {
+        'id': client.id,
+        'name': client.name,
+        'address': client.address or '',
+        'city': client.city or '',
+        'country_id': client.country_id,
+        'country': client.country.value if client.country else '',
+        'sales_person': client.sales_person or '',
+        'project_manager': client.project_manager or '',
+        'industry': client.industry or '',
+        'active': client.active
+    }
+    
+    # Return client data along with sales and project manager options
+    response = {
+        'client': client_data,
+        'sales_items': sales_items,
+        'project_managers': project_managers
+    }
+    
+    return jsonify(response)
 
 # TODO: Add routes for client projects
 # TODO: Add routes for client contacts
