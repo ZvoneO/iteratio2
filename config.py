@@ -34,9 +34,8 @@ class DevelopmentConfig(Config):
     """Development configuration with debugging enabled."""
     DEBUG = True
     
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        return self.get_database_url()
+    def __init__(self):
+        self.SQLALCHEMY_DATABASE_URI = self.get_database_url()
 
 class TestingConfig(Config):
     """Testing configuration with testing database."""
@@ -48,9 +47,8 @@ class ProductionConfig(Config):
     """Production configuration with secure settings."""
     DEBUG = False
     
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        return self.get_database_url()
+    def __init__(self):
+        self.SQLALCHEMY_DATABASE_URI = self.get_database_url()
     
     # In production, ensure SECRET_KEY is set in environment
     SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -61,8 +59,8 @@ class ProductionConfig(Config):
 
 # Configuration dictionary for easy access
 config = {
-    'development': DevelopmentConfig,
-    'testing': TestingConfig,
-    'production': ProductionConfig,
-    'default': DevelopmentConfig
+    'development': DevelopmentConfig(),
+    'testing': TestingConfig(),
+    'production': ProductionConfig(),
+    'default': DevelopmentConfig()
 }
