@@ -49,9 +49,10 @@ class ProductionConfig(Config):
     
     def __init__(self):
         self.SQLALCHEMY_DATABASE_URI = self.get_database_url()
-    
-    # In production, ensure SECRET_KEY is set in environment
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+        # In production, ensure SECRET_KEY is set in environment
+        # If not set, use the default from Config class as a fallback
+        if os.environ.get('SECRET_KEY'):
+            self.SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Enable HTTPS
     SESSION_COOKIE_SECURE = True

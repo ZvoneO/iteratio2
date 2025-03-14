@@ -34,6 +34,7 @@ def create_app(config_class=None):
     # Load configuration
     if config_class:
         app.config.from_object(config_class)
+        app.logger.info(f'Using configuration class: {config_class.__class__.__name__}')
     else:
         # Default configuration
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-development-only')
@@ -46,6 +47,17 @@ def create_app(config_class=None):
         os.makedirs(app.instance_path, exist_ok=True)
         
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.logger.info('Using default configuration')
+    
+    # Log configuration status
+    has_secret_key = bool(app.config.get('SECRET_KEY'))
+    app.logger.info(f'SECRET_KEY is {"set" if has_secret_key else "NOT SET"}')
+    app.logger.info(f'SQLALCHEMY_DATABASE_URI is {"set" if app.config.get("SQLALCHEMY_DATABASE_URI") else "NOT SET"}')
+    
+    # Ensure SECRET_KEY is set
+    if not has_secret_key:
+        app.logger.error('SECRET_KEY is not set! Setting a default for now, but this is not secure for production.')
+        app.config['SECRET_KEY'] = 'emergency-fallback-key-not-secure-for-production'
     
     # Initialize extensions
     db.init_app(app)
