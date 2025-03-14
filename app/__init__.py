@@ -1,10 +1,12 @@
-from flask import Flask, redirect, url_for, jsonify
+from flask import Flask, redirect, url_for, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 import os
+import logging
 from datetime import datetime
 from markupsafe import Markup
+import traceback
 
 from .models import db
 
@@ -19,6 +21,15 @@ def create_app(config_class=None):
         Configured Flask application
     """
     app = Flask(__name__)
+    
+    # Configure logging
+    if not app.debug:
+        # Set up logging to stdout for Render
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Iteratio2 startup')
     
     # Load configuration
     if config_class:
@@ -50,7 +61,11 @@ def create_app(config_class=None):
     @login_manager.user_loader
     def load_user(user_id):
         """Load user by ID for Flask-Login."""
-        return User.query.get(int(user_id))
+        try:
+            return User.query.get(int(user_id))
+        except Exception as e:
+            app.logger.error(f"Error loading user: {str(e)}")
+            return None
     
     # Add context processor to provide current date to all templates
     @app.context_processor
@@ -85,5 +100,18 @@ def create_app(config_class=None):
         if current_user.is_authenticated:
             return redirect(url_for('admin.dashboard'))
         return redirect(url_for('auth.login'))
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found_error(error):
+        app.logger.error(f"404 error: {error}")
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        app.logger.error(f"500 error: {error}")
+        app.logger.error(traceback.format_exc())
+        return render_template('errors/500.html'), 500
     
     return app

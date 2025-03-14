@@ -64,63 +64,70 @@ def dashboard():
     Different user roles see different dashboard content.
     Uses the robust role-checking functions from utils.
     """
-    # Initialize counts
-    project_count = 0
-    client_count = 0
-    user_count = 0
-    consultant_count = 0
-    
-    # Get user roles using the utility function
-    user_roles = get_user_roles(current_user)
-    
-    # Check if user is admin or manager
-    is_admin_or_manager = user_has_any_role(current_user, ['Admin', 'Manager']) or current_user.username == 'admin'
-    is_project_manager = user_has_role(current_user, 'Project Manager')
-    
-    # Get counts based on user role
-    if is_admin_or_manager:
-        # Admins and Managers see all projects, clients, and users
-        project_count = Project.query.count()
-        client_count = Client.query.count()
-        user_count = User.query.count()
-        
-        # Count users with Consultant role instead of entries in consultants table
-        consultant_role = Role.query.filter_by(name='Consultant').first()
-        if consultant_role:
-            consultant_count = User.query.join(User.roles).filter(Role.id == consultant_role.id).count()
-        else:
-            consultant_count = 0
-    elif is_project_manager:
-        # Project Managers see their assigned projects
-        project_count = Project.query.filter_by(manager_id=current_user.id).count()
-        # Get clients with projects managed by this user
-        client_ids = db.session.query(Project.client_id).filter_by(manager_id=current_user.id).distinct()
-        client_count = Client.query.filter(Client.id.in_(client_ids)).count()
-        user_count = 0
-        
-        # Count users with Consultant role instead of entries in consultants table
-        consultant_role = Role.query.filter_by(name='Consultant').first()
-        if consultant_role:
-            consultant_count = User.query.join(User.roles).filter(Role.id == consultant_role.id).count()
-        else:
-            consultant_count = 0
-    else:  # Consultant
-        # Get consultant record for current user
-        consultant = Consultant.query.filter_by(user_id=current_user.id).first()
-        if consultant:
-            # This would need to be updated when project assignments are implemented
-            # For now, just show 0 counts
-            project_count = 0
-            client_count = 0
+    try:
+        # Initialize counts
+        project_count = 0
+        client_count = 0
         user_count = 0
         consultant_count = 0
-    
-    return render_template('admin/dashboard.html', 
-                          project_count=project_count,
-                          client_count=client_count,
-                          user_count=user_count,
-                          consultant_count=consultant_count,
-                          user_roles=user_roles)
+        
+        # Get user roles using the utility function
+        user_roles = get_user_roles(current_user)
+        logger.info(f"User {current_user.username} has roles: {user_roles}")
+        
+        # Check if user is admin or manager
+        is_admin_or_manager = user_has_any_role(current_user, ['Admin', 'Manager']) or current_user.username == 'admin'
+        is_project_manager = user_has_role(current_user, 'Project Manager')
+        
+        logger.info(f"User {current_user.username} is_admin_or_manager: {is_admin_or_manager}, is_project_manager: {is_project_manager}")
+        
+        # Get counts based on user role
+        if is_admin_or_manager:
+            try:
+                # Admins and Managers see all projects, clients, and users
+                project_count = Project.query.count()
+                client_count = Client.query.count()
+                user_count = User.query.count()
+                
+                # Count users with Consultant role instead of entries in consultants table
+                consultant_role = Role.query.filter_by(name='Consultant').first()
+                if consultant_role:
+                    consultant_count = User.query.join(User.roles).filter(Role.id == consultant_role.id).count()
+                else:
+                    consultant_count = 0
+            except Exception as e:
+                logger.error(f"Error getting counts for admin/manager: {str(e)}")
+                logger.error(traceback.format_exc())
+        elif is_project_manager:
+            try:
+                # Project Managers see their assigned projects
+                project_count = Project.query.filter_by(manager_id=current_user.id).count()
+                # Get clients with projects managed by this user
+                client_ids = db.session.query(Project.client_id).filter_by(manager_id=current_user.id).distinct()
+                client_count = Client.query.filter(Client.id.in_(client_ids)).count()
+                user_count = 0
+            except Exception as e:
+                logger.error(f"Error getting counts for project manager: {str(e)}")
+                logger.error(traceback.format_exc())
+        
+        # Render the dashboard template with the counts
+        return render_template('admin/dashboard.html', 
+                            project_count=project_count,
+                            client_count=client_count,
+                            user_count=user_count,
+                            consultant_count=consultant_count,
+                            user_roles=user_roles)
+    except Exception as e:
+        logger.error(f"Error in dashboard route: {str(e)}")
+        logger.error(traceback.format_exc())
+        db.session.rollback()
+        flash("An error occurred while loading the dashboard. Please try again later.", "danger")
+        return render_template('admin/dashboard.html', 
+                            project_count=0,
+                            client_count=0,
+                            user_count=0,
+                            consultant_count=0,
+                            user_roles=[])
 
 @admin_bp.route('/users')
 @login_required
