@@ -6,9 +6,10 @@ Run this file to start the Flask development server.
 from app import create_app
 import os
 import argparse
+from config import config
 
 # Create the Flask application
-app = create_app(os.getenv('FLASK_ENV', 'production'))
+app = create_app(config[os.getenv('FLASK_ENV', 'production')])
 
 if __name__ == '__main__':
     # Set up argument parser
